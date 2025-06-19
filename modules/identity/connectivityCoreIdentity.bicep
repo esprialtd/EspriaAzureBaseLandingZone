@@ -1,4 +1,4 @@
-// modules/connectivityCoreIdentity.bicep
+// modules/identity/connectivityCoreIdentity.bicep
 
 @description('Customer abbreviation')
 param customerAbbreviation string
@@ -44,6 +44,23 @@ param firewallPrivateIpAddress string
 
 var location = region
 
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs && subnet.name != 'EntraDomainServices') {
+  name: 'nsg-${subnet.name}-${environment}-${customerAbbreviation}-${region}'
+  location: location
+  tags: {
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Location: tagLocation
+    Environment: environment
+    Application: 'Identity'
+    Function: 'NSG'
+    CostCenter: 'Core Services'
+  }
+  properties: {
+    securityRules: []
+  }
+}]
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: location
@@ -67,7 +84,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       properties: {
         addressPrefix: subnet.addressPrefix
         routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-identity-${customerAbbreviation}-${region}-hub')
+          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub')
+        } : null
+        networkSecurityGroup: (associateNSGs && subnet.name != 'EntraDomainServices') ? {
+          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${environment}-core-identity-${customerAbbreviation}-${region}')
         } : null
       }
     }]
@@ -75,7 +95,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
 }
 
 resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRouteTable) {
-  name: 'rt-${environment}-identity-${customerAbbreviation}-${region}-hub'
+  name: 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub'
   location: location
   tags: {
     CreatedBy: createdBy

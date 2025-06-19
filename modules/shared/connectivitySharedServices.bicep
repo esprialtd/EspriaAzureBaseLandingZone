@@ -1,4 +1,4 @@
-// modules/connectivitySharedServices.bicep
+// modules/shared/connectivitySharedServices.bicep
 
 @description('Customer abbreviation')
 param customerAbbreviation string
@@ -44,6 +44,23 @@ param firewallPrivateIpAddress string
 
 var location = region
 
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+  name: 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}'
+  location: location
+  tags: {
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Location: tagLocation
+    Environment: environment
+    Application: 'Shared Services'
+    Function: 'NSG'
+    CostCenter: 'Shared Services'
+  }
+  properties: {
+    securityRules: []
+  }
+}]
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: location
@@ -58,9 +75,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   }
   properties: {
     addressSpace: {
-      addressPrefixes: [
-        addressPrefix
-      ]
+      addressPrefixes: [addressPrefix]
     }
     subnets: [for subnet in subnetConfig: {
       name: subnet.name
@@ -68,6 +83,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
         addressPrefix: subnet.addressPrefix
         routeTable: attachRouteTable ? {
           id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub')
+        } : null
+        networkSecurityGroup: associateNSGs ? {
+          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}')
         } : null
       }
     }]
