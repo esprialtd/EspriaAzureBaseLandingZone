@@ -114,7 +114,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
           nextHopType: 'VirtualAppliance'
           nextHopIpAddress: firewallPrivateIpAddress
         }
-      },
+      }
       {
         name: 'vnet-prod-core-identity-${customerAbbreviation}-${region}-01'
         properties: {
@@ -122,7 +122,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
           nextHopType: 'VirtualAppliance'
           nextHopIpAddress: firewallPrivateIpAddress
         }
-      },
+      }
       {
         name: 'vnet-prod-sharedservices-${customerAbbreviation}-${region}-01'
         properties: {
@@ -130,7 +130,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
           nextHopType: 'VirtualAppliance'
           nextHopIpAddress: firewallPrivateIpAddress
         }
-      },
+      }
       {
         name: 'To-WAN'
         properties: {

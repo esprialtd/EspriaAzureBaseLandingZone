@@ -40,6 +40,12 @@ param functionTag string = 'Print Server'
 @description('CostCenter tag value')
 param costCenterTag string = 'Shared Services'
 
+@description('customer abbreviation')
+param customerAbbreviation string
+
+@description('region')
+param region string
+
 resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
   name: '${namePrefix}-nic'
   location: location

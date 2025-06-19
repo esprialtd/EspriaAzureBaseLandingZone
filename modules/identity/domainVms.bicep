@@ -121,5 +121,3 @@ resource vms 'Microsoft.Compute/virtualMachines@2023-03-01' = [for i in range(0,
   }
   dependsOn: [nic[i]]
 }]
-
-output domainVmIds array = [for vm in vms: vm.id]

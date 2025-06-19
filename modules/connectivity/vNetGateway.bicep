@@ -59,14 +59,30 @@ resource publicIp2 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   properties: {
     publicIPAllocationMethod: 'Static'
   }
-  tags: publicIp1.tags
+  tags: {
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Location: tagLocation
+    Environment: environment
+    Application: 'Connectivity and Routing'
+    Function: 'Gateway'
+    CostCenter: 'Core Services'
+  }
 }
 
 resource virtualNetworkGateway 'Microsoft.Network/virtualNetworkGateways@2023-02-01' = {
   name: gatewayName
   location: region
   dependsOn: [publicIp1, publicIp2]
-  tags: publicIp1.tags
+  tags: {
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Location: tagLocation
+    Environment: environment
+    Application: 'Connectivity and Routing'
+    Function: 'Gateway'
+    CostCenter: 'Core Services'
+  }
   properties: {
     enableBgp: false
     activeActive: true

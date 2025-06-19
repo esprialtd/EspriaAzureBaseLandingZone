@@ -22,6 +22,22 @@ param adminPassword string
 @description('Resource group for storage')
 param storageRgName string
 
+@description('CreatedBy tag value')
+param createdBy string
+
+@description('ManagedBy tag value')
+param managedBy string
+
+@description('Location tag value')
+param tagLocation string
+
+@description('customer abbreviation')
+param customerAbbreviation string
+
+@description('region')
+param region string
+
+
 resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
   name: '${namePrefix}-nic'
   location: location

@@ -21,6 +21,30 @@ param privateEndpointSubnetName string = 'PrivateEndpoint'
 @description('Resource group for private DNS zones')
 param dnsZoneResourceGroup string
 
+@description('vnet Name')
+param vnetName string = 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+
+@description('Subnet Name')
+param subnetName string = 'SharedServices'
+
+@description('Core Subscription ID')
+param coreSubscriptionId string
+
+@description('Shared Subscription ID')
+param sharedSubscriptionId string
+
+@description('CreatedBy tag value')
+param createdBy string
+
+@description('ManagedBy tag value')
+param managedBy string
+
+@description('Location tag value')
+param tagLocation string
+
+
+
+
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: region
@@ -66,7 +90,6 @@ resource privateEndpoint 'Microsoft.Network/privateEndpoints@2023-02-01' = {
 resource privateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   name: 'privatelink.file.core.windows.net'
   location: 'global'
-  scope: resourceGroup(dnsZoneResourceGroup)
 }
 
 resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2020-06-01' = {

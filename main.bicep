@@ -62,23 +62,59 @@ param coreServicesGroupName string = '${customerAbbreviation} - Internal - Core 
 @description('Shared services management group display name')
 param sharedServicesGroupName string = '${customerAbbreviation} - Internal - Shared Services'
 
+// Core Resource Groups
+module coreResourceGroups 'modules/coreResourceGroups.bicep' = {
+  name: 'coreResourceGroups'
+  scope: subscription(coreSubscriptionId)
+  params: {
+    location: location
+    customerAbbreviation: customerAbbreviation
+    region: region
+    environment: environment
+    coreSubscriptionId: coreSubscriptionId
+  }
+}
+
+// Shared Resource Group
+module sharedResourceGroups 'modules/sharedResourceGroups.bicep' = {
+  name: 'sharedResourceGroups'
+  scope: subscription(sharedSubscriptionId)
+  params: {
+    location: location
+    customerAbbreviation: customerAbbreviation
+    region: region
+    environment: environment
+    sharedSubscriptionId: sharedSubscriptionId
+  }
+}
+
+var rgCoreConnectivity = coreResourceGroups.outputs.rgCoreConnectivity
+var rgCoreIdentity = coreResourceGroups.outputs.rgCoreIdentity
+var rgCoreManagement = coreResourceGroups.outputs.rgCoreManagement
+var rgSharedServices = sharedResourceGroups.outputs.rgSharedServices
+
 // Management Groups
 module managementGroups 'modules/managementGroups.bicep' = {
   name: 'managementGroups'
+  scope: tenant()
   params: {
+    customerName: customerName
     customerAbbreviation: customerAbbreviation
     topLevelGroupName: topLevelGroupName
     coreServicesGroupName: coreServicesGroupName
     sharedServicesGroupName: sharedServicesGroupName
     coreSubscriptionId: coreSubscriptionId
     sharedSubscriptionId: sharedSubscriptionId
+    createdBy: createdBy
+    managedBy: managedBy
+    tagLocation: tagLocation
   }
 }
 
 // Core Connectivity Hub VNet (10.101.0.0/21)
 module coreConnectivity 'modules/connectivity/connectivityCoreConnectivity.bicep' = {
   name: 'coreConnectivity'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreConnectivity.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -114,7 +150,7 @@ module coreConnectivity 'modules/connectivity/connectivityCoreConnectivity.bicep
 // Core Virtual Network Gateway (Active-Active)
 module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
   name: 'coreGateway'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreConnectivity.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -130,7 +166,7 @@ module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
 // Azure Firewall Deployment in Core Connectivity
 module coreFirewall 'modules/connectivity/azFirewall.bicep' = {
   name: 'coreFirewall'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreConnectivity.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -149,7 +185,7 @@ var firewallPrivateIp = coreFirewall.outputs.firewallPrivateIpAddress
 // Core Identity VNet (10.101.8.0/22)
 module coreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
   name: 'coreIdentity'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreIdentity.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -220,7 +256,7 @@ module coreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
 // Core Management VNet (10.101.248.0/21)
 module coreManagement 'modules/management/connectivityCoreManagement.bicep' = {
   name: 'coreManagement'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreManagement.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -290,7 +326,7 @@ module coreManagement 'modules/management/connectivityCoreManagement.bicep' = {
 // Shared Services VNet (10.101.16.0/21)
 module sharedServices 'modules/shared/connectivitySharedServices.bicep' = {
   name: 'sharedServices'
-  scope: subscription(sharedSubscriptionId)
+  scope: resourceGroup(rgSharedServices.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -355,7 +391,7 @@ module sharedServices 'modules/shared/connectivitySharedServices.bicep' = {
 // Management Server VM
 module managementVm 'modules/management/managementVm.bicep' = {
   name: 'managementVm'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreManagement.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -372,7 +408,7 @@ module managementVm 'modules/management/managementVm.bicep' = {
 // Domain Controller VMs
 module domainVms 'modules/identity/domainVms.bicep' = {
   name: 'domainVms'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreIdentity.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -386,7 +422,7 @@ module domainVms 'modules/identity/domainVms.bicep' = {
 // Entra Domain Services (AADDS)
 module aadds 'modules/identity/aadds.bicep' = {
   name: 'aadds'
-  scope: subscription(coreSubscriptionId)
+  scope: resourceGroup(rgCoreIdentity.name)
   params: {
     resourceGroupName: 'rg-${environment}-core-identity-${customerAbbreviation}-${region}-01'
     region: region
@@ -398,7 +434,7 @@ module aadds 'modules/identity/aadds.bicep' = {
 // Azure Files for Shared Services
 module azureFiles 'modules/shared/azureFiles.bicep' = {
   name: 'azureFiles'
-  scope: subscription(sharedSubscriptionId)
+  scope: resourceGroup(rgSharedServices.name)
   params: {
     region: region
     vnetName: 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
@@ -409,9 +445,9 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
   }
 }
 // File Server VM
-module fileServer 'modules/shared/fileServer.bicep' = {
+module fileServer 'modules/shared/fileVm.bicep' = {
   name: 'fileServer'
-  scope: subscription(sharedSubscriptionId)
+  scope: resourceGroup(rgSharedServices.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -426,9 +462,9 @@ module fileServer 'modules/shared/fileServer.bicep' = {
 }
 
 // Print Server VM
-module printServer 'modules/shared/printServer.bicep' = {
+module printServer 'modules/shared/printVm.bicep' = {
   name: 'printServer'
-  scope: subscription(sharedSubscriptionId)
+  scope: resourceGroup(rgSharedServices.name)
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -451,12 +487,12 @@ output sharedServicesVNetId string = sharedServices.outputs.vnetId
 output managementVmId string = managementVm.outputs.vmId
 output domainVmsIds array = [for vm in domainVms.outputs.vmIds: vm]
 output aaddsId string = aadds.outputs.aaddsId
-output azureFilesId string = azureFiles.outputs.azureFilesId
+output azureFilesId string = azureFiles.outputs.azireFilesId
 output fileServerId string = fileServer.outputs.fileServerId
 output firewallId string = coreFirewall.outputs.firewallId
 output firewallPrivateIpAddress string = coreFirewall.outputs.firewallPrivateIpAddress
 output virtualNetworkGatewayId string = coreGateway.outputs.virtualNetworkGatewayId
-output virtualNetworkGatewayPublicIpId string = coreGateway.outputs.virtualNetworkGatewayPublicIpId
+output virtualNetworkGatewayPublicIpId array = coreGateway.outputs.virtualNetworkGatewayPublicIpIds
 output routeTableIds object = {
   identity: coreIdentity.outputs.routeTableIds
   management: coreManagement.outputs.routeTableIds

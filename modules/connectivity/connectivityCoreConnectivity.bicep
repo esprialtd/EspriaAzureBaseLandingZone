@@ -16,10 +16,22 @@ param addressPrefix string
 param vnetName string
 
 @description('Should NSGs be associated to subnets?')
-param associateNSGs bool = true
+param associateNSGs string
 
 @description('Subnet configurations')
 param subnetConfig array
+
+@description('Attach Route Tables to Subnets?')
+param attachRouteTable string
+
+@description('CreatedBy tag value')
+param createdBy string
+
+@description('ManagedBy tag value')
+param managedBy string
+
+@description('Location tag value')
+param tagLocation string = 'UK South'
 
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
@@ -32,11 +44,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       name: subnet.name
       properties: {
         addressPrefix: subnet.addressPrefix
-        networkSecurityGroup: empty(associateNSGs) ? null : {
-          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${vnetName}-${subnet.name}')
         }
       }
-    }]
+    ]
   }
 }
 
@@ -48,4 +58,3 @@ resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet
 }]
 
 output vnetId string = vnet.id
-output azureFirewallPrivateIp string = azFirewall.properties.ipConfigurations[0].properties.privateIPAddress
