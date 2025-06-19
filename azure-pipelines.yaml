@@ -1,0 +1,51 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  location: 'uksouth'
+  deploymentName: 'landingZoneDeployment'
+  bicepFile: 'main.bicep'
+  parametersFile: 'main.parameters.json'
+
+stages:
+- stage: DeployLandingZone
+  jobs:
+  - job: DeployCore
+    displayName: 'Deploy to Core Subscription'
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'AzureCoreServiceConnection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment sub create \
+            --name '${{ variables.deploymentName }}-core' \
+            --location ${{ variables.location }} \
+            --template-file ${{ variables.bicepFile }} \
+            --parameters @$${{ variables.parametersFile }} \
+            --parameters coreSubscriptionId=$(az account show --query id -o tsv)
+
+  - job: DeployShared
+    displayName: 'Deploy to Shared Subscription'
+    dependsOn: DeployCore
+    steps:
+    - checkout: self
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'AzureSharedServiceConnection'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment sub create \
+            --name '${{ variables.deploymentName }}-shared' \
+            --location ${{ variables.location }} \
+            --template-file ${{ variables.bicepFile }} \
+            --parameters @$${{ variables.parametersFile }} \
+            --parameters sharedSubscriptionId=$(az account show --query id -o tsv)

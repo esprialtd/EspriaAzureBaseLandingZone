@@ -22,7 +22,7 @@ The landing zone provisions the following:
 
 ---
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F<YOUR-ORG>%2F<YOUR-REPO>%2Fmain%2Fmain.bicep)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FEspriaLtd%2F<YOUR-REPO>%2Fmain%2Fmain.bicep)
 
 
 ## 🗂️ Directory Structure
