@@ -84,7 +84,7 @@ az deployment sub create \
   --template-file main.bicep \
   --parameters @main.parameters.json
 💡 Use the --subscription flag to deploy to a specific subscription if needed.
-
+```
 ##  🔐 Secrets
 Ensure a Key Vault is provisioned with a secret named AdminPassword. Reference it in main.parameters.json.
 
