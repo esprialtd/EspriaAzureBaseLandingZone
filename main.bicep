@@ -62,6 +62,27 @@ param coreServicesGroupName string = '${customerAbbreviation} - Internal - Core 
 @description('Shared services management group display name')
 param sharedServicesGroupName string = '${customerAbbreviation} - Internal - Shared Services'
 
+// Network Variables
+
+var addressPrefixes = {
+  coreConnectivity: '10.101.0.0/21'
+  coreIdentity: '10.101.8.0/22'
+  coreManagement: '10.101.248.0/21'
+  sharedServices: '10.101.16.0/21'
+}
+
+var vnetNameCoreConnectivity = 'vnet-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
+var vnetNameCoreIdentity = 'vnet-${environment}-core-identity-${customerAbbreviation}-${region}-01'
+var vnetNameCoreManagement = 'vnet-${environment}-core-management-${customerAbbreviation}-${region}-01'
+var vnetNameSharedServices = 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+
+// Resource Group Variables
+var rgCoreConnectivity = coreResourceGroups.outputs.rgCoreConnectivity
+var rgCoreIdentity = coreResourceGroups.outputs.rgCoreIdentity
+var rgCoreManagement = coreResourceGroups.outputs.rgCoreManagement
+var rgSharedServices = sharedResourceGroups.outputs.rgSharedServices
+
+
 // Core Resource Groups
 module coreResourceGroups 'modules/coreResourceGroups.bicep' = {
   name: 'coreResourceGroups'
@@ -88,10 +109,6 @@ module sharedResourceGroups 'modules/sharedResourceGroups.bicep' = {
   }
 }
 
-var rgCoreConnectivity = coreResourceGroups.outputs.rgCoreConnectivity
-var rgCoreIdentity = coreResourceGroups.outputs.rgCoreIdentity
-var rgCoreManagement = coreResourceGroups.outputs.rgCoreManagement
-var rgSharedServices = sharedResourceGroups.outputs.rgSharedServices
 
 // Management Groups
 module managementGroups 'modules/managementGroups.bicep' = {
@@ -119,8 +136,8 @@ module coreConnectivity 'modules/connectivity/connectivityCoreConnectivity.bicep
     customerAbbreviation: customerAbbreviation
     region: region
     environment: environment
-    addressPrefix: '10.101.0.0/21'
-    vnetName: 'vnet-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
+    addressPrefix: addressPrefixes.coreConnectivity
+    vnetName: vnetNameCoreConnectivity
     associateNSGs: true
     attachRouteTable: true
     createdBy: createdBy
@@ -158,7 +175,7 @@ module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
     createdBy: createdBy
     managedBy: managedBy
     tagLocation: tagLocation
-    vnetName: 'vnet-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameCoreConnectivity
     gatewaySubnetId: coreConnectivity.outputs.subnetIds.GatewaySubnet
   }
 }
@@ -190,8 +207,8 @@ module coreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
     customerAbbreviation: customerAbbreviation
     region: region
     environment: environment
-    addressPrefix: '10.101.8.0/22'
-    vnetName: 'vnet-${environment}-core-identity-${customerAbbreviation}-${region}-01'
+    addressPrefix: addressPrefixes.coreIdentity
+    vnetName: vnetNameCoreIdentity
     associateNSGs: true
     attachRouteTable: true
     createdBy: createdBy
@@ -222,13 +239,13 @@ module coreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
         ]
         routes: [
           {
-            name: 'vnet-prod-sharedservices-${customerAbbreviation}-${region}-01'
+            name: vnetNameSharedServices
             addressPrefix: '10.101.16.0/21'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
           }
           {
-            name: 'vnet-prod-core-management-${customerAbbreviation}-${region}-01'
+            name: vnetNameCoreManagement
             addressPrefix: '10.101.248.0/21'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
@@ -261,8 +278,8 @@ module coreManagement 'modules/management/connectivityCoreManagement.bicep' = {
     customerAbbreviation: customerAbbreviation
     region: region
     environment: environment
-    addressPrefix: '10.101.248.0/21'
-    vnetName: 'vnet-${environment}-core-management-${customerAbbreviation}-${region}-01'
+    addressPrefix: addressPrefixes.coreManagement
+    vnetName: vnetNameCoreManagement
     associateNSGs: true
     attachRouteTable: true
     createdBy: createdBy
@@ -292,13 +309,13 @@ module coreManagement 'modules/management/connectivityCoreManagement.bicep' = {
         ]
         routes: [
           {
-            name: 'vnet-prod-core-identity-${customerAbbreviation}-${region}-01'
+            name: vnetNameCoreIdentity
             addressPrefix: '10.101.8.0/22'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
           }
           {
-            name: 'vnet-prod-sharedservices-${customerAbbreviation}-${region}-01'
+            name: vnetNameSharedServices
             addressPrefix: '10.101.16.0/21'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
@@ -331,8 +348,8 @@ module sharedServices 'modules/shared/connectivitySharedServices.bicep' = {
     customerAbbreviation: customerAbbreviation
     region: region
     environment: environment
-    addressPrefix: '10.101.16.0/21'
-    vnetName: 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+    addressPrefix: addressPrefixes.sharedServices
+    vnetName: vnetNameSharedServices
     associateNSGs: true
     attachRouteTable: true
     createdBy: createdBy
@@ -357,13 +374,13 @@ module sharedServices 'modules/shared/connectivitySharedServices.bicep' = {
         ]
         routes: [
           {
-            name: 'vnet-prod-core-identity-${customerAbbreviation}-${region}-01'
+            name: vnetNameCoreIdentity
             addressPrefix: '10.101.8.0/22'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
           }
           {
-            name: 'vnet-prod-core-management-${customerAbbreviation}-${region}-01'
+            name: vnetNameCoreManagement
             addressPrefix: '10.101.248.0/21'
             nextHopType: 'VirtualAppliance'
             nextHopIpAddress: firewallPrivateIp
@@ -396,7 +413,7 @@ module managementVm 'modules/management/managementVm.bicep' = {
     customerAbbreviation: customerAbbreviation
     region: region
     environment: environment
-    vnetName: 'vnet-${environment}-core-management-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameCoreManagement
     subnetName: 'ManagementServers'
     adminUsername: adminUsername
     adminPassword: adminPassword
@@ -413,7 +430,7 @@ module domainVms 'modules/identity/domainVms.bicep' = {
     customerAbbreviation: customerAbbreviation
     region: region
     regionAbbreviation: toUpper(take(region, 2))
-    vnetName: 'vnet-${environment}-core-identity-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameCoreIdentity
     subnetName: 'DomainControllers'
     adminUsername: adminUsername
     adminPassword: adminPassword
@@ -427,7 +444,7 @@ module aadds 'modules/identity/aadds.bicep' = {
     resourceGroupName: 'rg-${environment}-core-identity-${customerAbbreviation}-${region}-01'
     region: region
     domainName: '${customerAbbreviation}.local'
-    vnetName: 'vnet-${environment}-core-identity-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameCoreIdentity
     subnetName: 'EntraDomainServices'
   }
 }
@@ -437,11 +454,13 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
   scope: resourceGroup(rgSharedServices.name)
   params: {
     region: region
-    vnetName: 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameSharedServices
     subnetName: 'PrivateEndpoint'
     createdBy: createdBy
     managedBy: managedBy
     tagLocation: tagLocation
+    customerAbbreviation: customerAbbreviation
+    environment: environment
   }
 }
 // File Server VM
@@ -451,7 +470,7 @@ module fileServer 'modules/shared/fileVm.bicep' = {
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
-    vnetName: 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameSharedServices
     subnetName: 'SharedServices'
     adminUsername: adminUsername
     adminPassword: adminPassword
@@ -468,7 +487,7 @@ module printServer 'modules/shared/printVm.bicep' = {
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
-    vnetName: 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+    vnetName: vnetNameSharedServices
     subnetName: 'SharedServices'
     adminUsername: adminUsername
     adminPassword: adminPassword

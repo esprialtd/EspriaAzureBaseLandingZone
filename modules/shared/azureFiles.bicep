@@ -6,6 +6,9 @@ param region string
 @description('Storage account name (must be globally unique)')
 param storageAccountName string
 
+@description('Customer Abbreviation')
+param customerAbbreviation string
+
 @description('Share name for Azure Files')
 param fileShareName string = 'sharedfiles'
 
@@ -27,9 +30,6 @@ param vnetName string = 'vnet-${environment}-sharedservices-${customerAbbreviati
 @description('Subnet Name')
 param subnetName string = 'SharedServices'
 
-@description('Core Subscription ID')
-param coreSubscriptionId string
-
 @description('Shared Subscription ID')
 param sharedSubscriptionId string
 
@@ -41,7 +41,6 @@ param managedBy string
 
 @description('Location tag value')
 param tagLocation string
-
 
 
 

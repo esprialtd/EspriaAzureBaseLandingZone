@@ -1,0 +1,74 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "customerName": {
+      "type": "string"
+    },
+    "customerAbbreviation": {
+      "type": "string"
+    },
+    "region": {
+      "type": "string",
+      "allowedValues": [
+        "uksouth",
+        "ukwest",
+        "northeurope",
+        "westeurope"
+      ],
+      "defaultValue": "uksouth"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[parameters('region')]"
+    },
+    "environment": {
+      "type": "string",
+      "allowedValues": [
+        "prod",
+        "dev",
+        "uat"
+      ],
+      "defaultValue": "prod"
+    },
+    "coreSubscriptionId": {
+      "type": "string"
+    },
+    "sharedSubscriptionId": {
+      "type": "string"
+    },
+    "createdBy": {
+      "type": "string",
+      "defaultValue": "Espria Ltd"
+    },
+    "managedBy": {
+      "type": "string",
+      "defaultValue": "Espria Ltd"
+    },
+    "tagLocation": {
+      "type": "string",
+      "defaultValue": "UK South"
+    },
+    "adminUsername": {
+      "type": "string"
+    },
+    "adminPassword": {
+      "type": "securestring"
+    },
+    "onPremAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.1.0.0/16"
+    },
+    "topLevelGroupName": {
+      "type": "string"
+    },
+    "coreServicesGroupName": {
+      "type": "string"
+    },
+    "sharedServicesGroupName": {
+      "type": "string"
+    }
+  },
+  "resources": [],
+  "outputs": {}
+}
