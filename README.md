@@ -25,6 +25,7 @@ The landing zone provisions the following:
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fmain.bicep)
 
 
+
 ## 🗂️ Directory Structure
 
 ├── main.bicep                     # Root orchestration template
