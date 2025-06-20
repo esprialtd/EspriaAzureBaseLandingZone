@@ -25,6 +25,7 @@ stages:
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
+          az bicep build main.bicep --out main.json \
           az deployment sub create \
             --name '${{ variables.deploymentName }}-core' \
             --location ${{ variables.location }} \
