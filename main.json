@@ -5,16 +5,10 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "9360961897269595244"
+      "templateHash": "16258585475140285529"
     }
   },
   "parameters": {
-    "customerName": {
-      "type": "string",
-      "metadata": {
-        "description": "Customer full name (e.g., Espria)"
-      }
-    },
     "customerAbbreviation": {
       "type": "string",
       "metadata": {
