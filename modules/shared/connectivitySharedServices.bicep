@@ -126,10 +126,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       addressPrefixes: [addressPrefix]
     }
     subnets: [
-      for subnet in subnetConfig: {
-        name: subnet.name
+      for sn in subnetConfig: {
+        name: sn.name
         properties: {
-          addressPrefix: subnet.addressPrefix
+          addressPrefix: sn.addressPrefix
           routeTable: attachRouteTable ? {
           id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub')
         } : null
