@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "5558002865640674077"
+      "templateHash": "12681213908291055677"
     }
   },
   "parameters": {
@@ -478,7 +478,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "5874663989129669388"
+              "templateHash": "15101724763352529118"
             }
           },
           "parameters": {
@@ -656,6 +656,7 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}/{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "properties": {
+                "addressPrefix": "[parameters('subnetConfig')[copyIndex()].addressPrefix]",
                 "networkSecurityGroup": {
                   "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName')))]"
                 }
@@ -1214,7 +1215,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "7370582788242210405"
+              "templateHash": "6596181206459382959"
             }
           },
           "parameters": {
@@ -1469,6 +1470,7 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}/{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "properties": {
+                "addressPrefix": "[parameters('subnetConfig')[copyIndex()].addressPrefix]",
                 "networkSecurityGroup": {
                   "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName')))]"
                 }
@@ -1610,7 +1612,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "14242849782927595915"
+              "templateHash": "3389122772631652870"
             }
           },
           "parameters": {
@@ -1858,6 +1860,7 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}/{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "properties": {
+                "addressPrefix": "[parameters('subnetConfig')[copyIndex()].addressPrefix]",
                 "networkSecurityGroup": {
                   "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName')))]"
                 }
@@ -1994,7 +1997,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "12535076334949611648"
+              "templateHash": "3968546517845730469"
             }
           },
           "parameters": {
@@ -2236,6 +2239,7 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}/{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "properties": {
+                "addressPrefix": "[parameters('subnetConfig')[copyIndex()].addressPrefix]",
                 "networkSecurityGroup": {
                   "id": "[resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName')))]"
                 }

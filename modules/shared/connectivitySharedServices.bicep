@@ -155,12 +155,14 @@ resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for 
 }]
 
 // 3. Associate NSGs to subnets via child resource, ensuring subnets & NSGs exist first
-resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [for sn in subnetConfig: if (associateNSGs) {
   parent: vnet
-  name: subnet.name
+  name: sn.name
   properties: {
+    // Re-specify address prefix to avoid wiping it out
+    addressPrefix: sn.addressPrefix
     networkSecurityGroup: {
-      id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
+      id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${sn.name}-${vnetName}')
     }
   }
   dependsOn: [ vnet, subnetNSGs ]
