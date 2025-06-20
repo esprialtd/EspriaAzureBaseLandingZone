@@ -1,9 +1,4 @@
 // modules/management/connectivityCoreManagement.bicep
-@description('Route tables to assign to subnets')
-param routeTables array = []
-
-@description('Hub VNet ID for peering')
-param hubVnetId string
 
 @description('Customer abbreviation')
 param customerAbbreviation string

@@ -29,8 +29,8 @@ stages:
           az deployment sub create \
             --name '${{ variables.deploymentName }}-core' \
             --location ${{ variables.location }} \
-            --template-file ${{ variables.bicepFile }} \
-            --parameters @$${{ variables.parametersFile }} \
+            --template-file ./main.json \ 
+            --parameters ./main.parameters.json \
             --parameters coreSubscriptionId=$(az account show --query id -o tsv)
 
   - job: DeployShared

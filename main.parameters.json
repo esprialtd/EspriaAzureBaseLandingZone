@@ -3,19 +3,19 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "customerAbbreviation": {
-      "value": "ESP"
+      "value": ""
     },
     "coreSubscriptionId": {
-      "value": "<CORE_SUBSCRIPTION_ID>"
+      "value": ""
     },
     "sharedSubscriptionId": {
-      "value": "<SHARED_SUBSCRIPTION_ID>"
+      "value": ""
     },
     "adminUsername": {
-      "value": "espriaadmin"
+      "value": ""
     },
     "adminPassword": {
-      "value": "P@ssword1234!"
+      "value": ""
     }
   }
 }

@@ -6,14 +6,17 @@ param region string
 @description('Environment')
 param environment string
 
+@description('Whether to associate NSGs')
+param associateNSGs bool = true
+
 @description('VNet address prefix')
 param addressPrefix string
 
+@description('Customer abbreviation')
+param customerAbbreviation string
+
 @description('VNet name')
 param vnetName string
-
-@description('Should NSGs be associated to subnets?')
-param associateNSGs bool
 
 @description('Subnet configurations')
 param subnetConfig array
@@ -57,6 +60,9 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       properties: {
         addressPrefix: subnet.addressPrefix
         }
+        networkSecurityGroup: associateNSGs ? {
+          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-vnet-${environment}-core-management-${customerAbbreviation}-${region}')
+        } : null
       }
     ]
   }
