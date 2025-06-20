@@ -99,14 +99,10 @@ module sharedResourceGroups 'modules/sharedResourceGroups.bicep' = {
     tagLocation: tagLocation
   }
 }
-output rgCoreConnectivity string = coreResourceGroups.outputs.rgCoreConnectivity
-param rgCoreConnectivity string
-output rgCoreIdentity string = coreResourceGroups.outputs.rgCoreIdentity
-param rgCoreIdentity string
-output rgCoreManagement string = coreResourceGroups.outputs.rgCoreManagement
-param rgCoreManagement string
-output rgSharedServices string = sharedResourceGroups.outputs.rgSharedServices
-param rgSharedServices string
+param rgCoreConnectivity string = 'rg-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
+param rgCoreIdentity string = 'rg-${environment}-core-identity-${customerAbbreviation}-${region}-01'
+param rgCoreManagement string = 'rg-${environment}-core-management-${customerAbbreviation}-${region}-01'
+param rgSharedServices string = 'rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
 
 // Management Groups
 // module managementGroups 'modules/managementGroups.bicep' = {

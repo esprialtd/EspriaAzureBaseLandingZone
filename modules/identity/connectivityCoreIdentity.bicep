@@ -160,6 +160,7 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
 // NSG creation
 resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
   name: 'nsg-${vnetName}-${subnet.name}'
+  dependsOn: [vnet]
   location: region
   properties: {}
 }

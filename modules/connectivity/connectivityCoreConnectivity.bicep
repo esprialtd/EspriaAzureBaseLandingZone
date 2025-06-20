@@ -70,6 +70,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
 // NSG creation
 resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
   name: 'nsg-${vnetName}-${subnet.name}'
+  dependsOn: [vnet]
   location: region
   properties: {}
 }
