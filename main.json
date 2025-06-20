@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "586179778952378751"
+      "templateHash": "5558002865640674077"
     }
   },
   "parameters": {
@@ -454,11 +454,11 @@
             "value": [
               {
                 "name": "GatewaySubnet",
-                "addressPrefix": "10.101.0.0/27"
+                "addressPrefix": "10.101.0.0/26"
               },
               {
                 "name": "AzureFirewallSubnet",
-                "addressPrefix": "10.101.1.0/24"
+                "addressPrefix": "10.101.0.65/26"
               },
               {
                 "name": "CoreServices",
@@ -478,7 +478,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "9408802119044303340"
+              "templateHash": "5874663989129669388"
             }
           },
           "parameters": {
@@ -601,13 +601,19 @@
                   {
                     "name": "GatewaySubnet",
                     "properties": {
-                      "addressPrefix": "10.101.1.0/27"
+                      "addressPrefix": "10.101.0.0/26"
                     }
                   },
                   {
                     "name": "AzureFirewallSubnet",
                     "properties": {
-                      "addressPrefix": "10.101.2.0/26"
+                      "addressPrefix": "10.101.0.65/26"
+                    }
+                  },
+                  {
+                    "name": "CoreServices",
+                    "properties": {
+                      "addressPrefix": "10.101.2.0/24"
                     }
                   },
                   {
@@ -1208,7 +1214,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1229765745436418463"
+              "templateHash": "7370582788242210405"
             }
           },
           "parameters": {
@@ -1426,7 +1432,7 @@
                   {
                     "name": "PrivateEndpoint",
                     "properties": {
-                      "addressPrefix": "10.101.7.0/24"
+                      "addressPrefix": "10.101.11.0/24"
                     }
                   }
                 ]
