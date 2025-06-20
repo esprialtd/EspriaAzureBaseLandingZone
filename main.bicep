@@ -139,7 +139,7 @@ module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnec
       }
       {
         name: 'AzureFirewallSubnet'
-        addressPrefix: '10.101.0.65/26'
+        addressPrefix: '10.101.0.64/26'
       }
       {
         name: 'CoreServices'

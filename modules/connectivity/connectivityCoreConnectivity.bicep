@@ -67,7 +67,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
       }
       {
         name: 'AzureFirewallSubnet'
-        properties: { addressPrefix: '10.101.0.65/26' }
+        properties: { addressPrefix: '10.101.0.64/26' }
       }
       {
         name: 'CoreServices'
