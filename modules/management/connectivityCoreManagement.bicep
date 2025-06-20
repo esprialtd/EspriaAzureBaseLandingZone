@@ -126,14 +126,17 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       addressPrefixes: [addressPrefix]
     }
     subnets: [
-      for sn in subnetConfig: {
-        name: sn.name
-        properties: {
-          addressPrefix: sn.addressPrefix
-          routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-management-${customerAbbreviation}-${region}-hub')
-        } : null
-        }
+      {
+        name: 'ManagementServers'
+        properties: { addressPrefix: '10.101.248.0/24' }
+      }
+      {
+        name: 'AzureBastionSubnet'
+        properties: { addressPrefix: '10.101.247.0/27' }
+      }
+      {
+        name: 'PrivateEndpoints'
+        properties: { addressPrefix: '10.101.255.0/24' }
       }
     ]
   }

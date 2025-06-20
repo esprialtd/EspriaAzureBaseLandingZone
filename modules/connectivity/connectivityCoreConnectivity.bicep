@@ -44,9 +44,9 @@ param excludeFromNsg array = []
 var location = region
 
 // 1. Create the VNet and subnets (only address prefixes and route tables)
-resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: vnetName
-  location: location
+resource vnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
+  name:     vnetName
+  location: resourceGroup().location
   tags: {
     Application: applicationTag
     Function:    functionTag
@@ -58,18 +58,25 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   }
   properties: {
     addressSpace: {
-      addressPrefixes: [addressPrefix]
+      addressPrefixes: [ addressPrefix ]
     }
     subnets: [
-      for sn in subnetConfig: {
-        name: sn.name
-        properties: {
-          addressPrefix: sn.addressPrefix
-        }
+      {
+        name: 'GatewaySubnet'
+        properties: { addressPrefix: '10.101.1.0/27' }
+      }
+      {
+        name: 'AzureFirewallSubnet'
+        properties: { addressPrefix: '10.101.2.0/26' }
+      }
+      {
+        name: 'PrivateEndpoint'
+        properties: { addressPrefix: '10.101.11.0/24' }
       }
     ]
   }
 }
+
 
 // 2. Create NSGs for filtered subnets
 resource nsgCollection 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [

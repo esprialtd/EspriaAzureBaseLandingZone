@@ -126,14 +126,13 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       addressPrefixes: [addressPrefix]
     }
     subnets: [
-      for sn in subnetConfig: {
-        name: sn.name
-        properties: {
-          addressPrefix: sn.addressPrefix
-          routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub')
-        } : null
-        }
+      {
+        name: 'SharedServices'
+        properties: { addressPrefix: '10.101.16.0/24' }
+      }
+      {
+        name: 'PrivateEndpoint'
+        properties: { addressPrefix: '10.101.23.0/24' }
       }
     ]
   }

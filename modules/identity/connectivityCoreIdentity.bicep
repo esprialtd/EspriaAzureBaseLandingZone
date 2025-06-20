@@ -128,14 +128,17 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       addressPrefixes: [addressPrefix]
     }
     subnets: [
-      for sn in subnetConfig: {
-        name: sn.name
-        properties: {
-          addressPrefix: sn.addressPrefix
-          routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub')
-        } : null
-        }
+      {
+        name: 'DomainControllers'
+        properties: { addressPrefix: '10.101.8.0/24' }
+      }
+      {
+        name: 'EntraDomainServices'
+        properties: { addressPrefix: '10.101.9.0/24' }
+      }
+      {
+        name: 'PrivateEndpoint'
+        properties: { addressPrefix: '10.101.7.0/24' }
       }
     ]
   }

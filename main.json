@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "1015486898809274298"
+      "templateHash": "2332243941259150951"
     }
   },
   "parameters": {
@@ -478,7 +478,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "12373872014819965164"
+              "templateHash": "18421506209042189159"
             }
           },
           "parameters": {
@@ -579,9 +579,9 @@
           "resources": [
             {
               "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2023-02-01",
+              "apiVersion": "2022-05-01",
               "name": "[parameters('vnetName')]",
-              "location": "[variables('location')]",
+              "location": "[resourceGroup().location]",
               "tags": {
                 "Application": "[parameters('applicationTag')]",
                 "Function": "[parameters('functionTag')]",
@@ -592,23 +592,31 @@
                 "Location": "[parameters('tagLocation')]"
               },
               "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]"
-                      }
-                    }
-                  }
-                ],
                 "addressSpace": {
                   "addressPrefixes": [
                     "[parameters('addressPrefix')]"
                   ]
-                }
+                },
+                "subnets": [
+                  {
+                    "name": "GatewaySubnet",
+                    "properties": {
+                      "addressPrefix": "10.101.1.0/27"
+                    }
+                  },
+                  {
+                    "name": "AzureFirewallSubnet",
+                    "properties": {
+                      "addressPrefix": "10.101.2.0/26"
+                    }
+                  },
+                  {
+                    "name": "PrivateEndpoint",
+                    "properties": {
+                      "addressPrefix": "10.101.11.0/24"
+                    }
+                  }
+                ]
               }
             },
             {
@@ -1200,7 +1208,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "9532470060161871108"
+              "templateHash": "1229765745436418463"
             }
           },
           "parameters": {
@@ -1397,24 +1405,31 @@
                 "Location": "[parameters('tagLocation')]"
               },
               "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
                 "addressSpace": {
                   "addressPrefixes": [
                     "[parameters('addressPrefix')]"
                   ]
-                }
+                },
+                "subnets": [
+                  {
+                    "name": "DomainControllers",
+                    "properties": {
+                      "addressPrefix": "10.101.8.0/24"
+                    }
+                  },
+                  {
+                    "name": "EntraDomainServices",
+                    "properties": {
+                      "addressPrefix": "10.101.9.0/24"
+                    }
+                  },
+                  {
+                    "name": "PrivateEndpoint",
+                    "properties": {
+                      "addressPrefix": "10.101.7.0/24"
+                    }
+                  }
+                ]
               }
             },
             {
@@ -1589,7 +1604,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "15782487890564518155"
+              "templateHash": "16467354299013764058"
             }
           },
           "parameters": {
@@ -1779,24 +1794,31 @@
                 "Location": "[parameters('tagLocation')]"
               },
               "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
                 "addressSpace": {
                   "addressPrefixes": [
                     "[parameters('addressPrefix')]"
                   ]
-                }
+                },
+                "subnets": [
+                  {
+                    "name": "ManagementServers",
+                    "properties": {
+                      "addressPrefix": "10.101.248.0/24"
+                    }
+                  },
+                  {
+                    "name": "AzureBastionSubnet",
+                    "properties": {
+                      "addressPrefix": "10.101.247.0/27"
+                    }
+                  },
+                  {
+                    "name": "PrivateEndpoints",
+                    "properties": {
+                      "addressPrefix": "10.101.255.0/24"
+                    }
+                  }
+                ]
               }
             },
             {
@@ -1966,7 +1988,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "14167390092301827878"
+              "templateHash": "12535076334949611648"
             }
           },
           "parameters": {
@@ -2156,24 +2178,25 @@
                 "Location": "[parameters('tagLocation')]"
               },
               "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
                 "addressSpace": {
                   "addressPrefixes": [
                     "[parameters('addressPrefix')]"
                   ]
-                }
+                },
+                "subnets": [
+                  {
+                    "name": "SharedServices",
+                    "properties": {
+                      "addressPrefix": "10.101.16.0/24"
+                    }
+                  },
+                  {
+                    "name": "PrivateEndpoint",
+                    "properties": {
+                      "addressPrefix": "10.101.23.0/24"
+                    }
+                  }
+                ]
               }
             },
             {
