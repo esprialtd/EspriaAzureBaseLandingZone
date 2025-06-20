@@ -56,54 +56,7 @@ param firewallPrivateIpAddress string
 
 var location = region
 
-resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
-  name: 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}'
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    securityRules: []
-  }
-}]
-
-resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: vnetName
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    addressSpace: {
-      addressPrefixes: [addressPrefix]
-    }
-    subnets: [for subnet in subnetConfig: {
-      name: subnet.name
-      properties: {
-        addressPrefix: subnet.addressPrefix
-        routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub')
-        } : null
-        networkSecurityGroup: associateNSGs ? {
-          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}')
-        } : null
-      }
-    }]
-  }
-}
-
+// route table Creation
 resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRouteTable) {
   name: 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub'
   location: location
@@ -155,14 +108,59 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   }
 }
 
-// NSG creation
-resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
-  name: 'nsg-${vnetName}-${subnet.name}'
-  dependsOn: [vnet]
-  location: region
-  properties: {}
+// NSG Creation for subnets
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+  name: 'nsg-${subnet.name}-${vnetName}'
+  location: location
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
+  properties: {
+    securityRules: []
+  }
+}]
+
+// VNet with subnet NSG/RT associations
+resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
+  name: vnetName
+  location: location
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
+  properties: {
+    addressSpace: {
+      addressPrefixes: [addressPrefix]
+    }
+    subnets: [for subnet in subnetConfig: {
+      name: subnet.name
+      properties: {
+        addressPrefix: subnet.addressPrefix
+        routeTable: attachRouteTable ? {
+          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub')
+        } : null
+        networkSecurityGroup: associateNSGs ? {
+          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}')
+        } : null
+      }
+    }]
+  }
 }
-]
+
+
+
+
 
 output vnetId string = vnet.id
 output routeTableIds string = routeTable.id

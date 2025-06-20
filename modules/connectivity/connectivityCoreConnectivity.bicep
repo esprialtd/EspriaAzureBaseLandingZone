@@ -38,9 +38,31 @@ param functionTag string = 'Core Management'
 @description('Cost Center tag')
 param costCenterTag string = 'Core Services'
 
+var location = region
+
+// NSG Creation for subnets
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs && subnet.name != 'EntraDomainServices') {
+  name: 'nsg-${subnet.name}-${vnetName}'
+  location: location
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
+  properties: {
+    securityRules: []
+  }
+}]
+
+
+// VNet with subnet NSG associations
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
-  location: region
+  location: location
   tags: {
     Application: applicationTag
     Function: functionTag
@@ -52,29 +74,23 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   }
   properties: {
     addressSpace: {
-      addressPrefixes: [addressPrefix]
+      addressPrefixes: [
+        addressPrefix
+      ]
     }
     subnets: [for subnet in subnetConfig: {
       name: subnet.name
       properties: {
         addressPrefix: subnet.addressPrefix
-        }
-        networkSecurityGroup: associateNSGs ? {
-          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-vnet-${environment}-core-management-${customerAbbreviation}-${region}')
+        networkSecurityGroup: (associateNSGs && subnet.name != 'EntraDomainServices') ? {
+          id: resourceId(
+            'Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
         } : null
       }
-    ]
+    }]
   }
 }
 
-// NSG creation
-resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
-  name: 'nsg-${vnetName}-${subnet.name}'
-  dependsOn: [vnet]
-  location: region
-  properties: {}
-}
-]
 
 
 output vnetId string = vnet.id

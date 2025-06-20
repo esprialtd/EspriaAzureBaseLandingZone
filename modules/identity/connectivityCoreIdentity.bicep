@@ -55,56 +55,7 @@ param firewallPrivateIpAddress string
 
 var location = region
 
-resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs && subnet.name != 'EntraDomainServices') {
-  name: 'nsg-${subnet.name}-${environment}-${customerAbbreviation}-${region}'
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    securityRules: []
-  }
-}]
-
-resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
-  name: vnetName
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    addressSpace: {
-      addressPrefixes: [
-        addressPrefix
-      ]
-    }
-    subnets: [for subnet in subnetConfig: {
-      name: subnet.name
-      properties: {
-        addressPrefix: subnet.addressPrefix
-        routeTable: attachRouteTable ? {
-          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub')
-        } : null
-        networkSecurityGroup: (associateNSGs && subnet.name != 'EntraDomainServices') ? {
-          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${environment}-core-identity-${customerAbbreviation}-${region}')
-        } : null
-      }
-    }]
-  }
-}
-
+// Route table creation
 resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRouteTable) {
   name: 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub'
   location: location
@@ -156,15 +107,62 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   }
 }
 
+// NSG Creation for subnets
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs && subnet.name != 'EntraDomainServices') {
+  name: 'nsg-${subnet.name}-${vnetName}'
+  location: location
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
+  properties: {
+    securityRules: []
+  }
+}]
 
-// NSG creation
-resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
-  name: 'nsg-${vnetName}-${subnet.name}'
-  dependsOn: [vnet]
-  location: region
-  properties: {}
+// VNet with subnet NSG/RT associations
+resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
+  name: vnetName
+  location: location
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
+  properties: {
+    addressSpace: {
+      addressPrefixes: [
+        addressPrefix
+      ]
+    }
+    subnets: [for subnet in subnetConfig: {
+      name: subnet.name
+      properties: {
+        addressPrefix: subnet.addressPrefix
+        routeTable: attachRouteTable ? {
+          id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub')
+        } : null
+        networkSecurityGroup: (associateNSGs && subnet.name != 'EntraDomainServices') ? {
+          id: resourceId(
+            'Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
+        } : null
+      }
+    }]
+  }
 }
-]
+
+
+
+
 
 output vnetId string = vnet.id
 output routeTableIds string = routeTable.id

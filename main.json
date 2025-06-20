@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "5346595059618223667"
+      "templateHash": "17388552803366709311"
     }
   },
   "parameters": {
@@ -472,7 +472,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1607883269701512055"
+              "templateHash": "8358441811436699679"
             }
           },
           "parameters": {
@@ -560,12 +560,38 @@
               }
             }
           },
+          "variables": {
+            "location": "[parameters('region')]"
+          },
           "resources": [
+            {
+              "copy": {
+                "name": "subnetNSGs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "condition": "[and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex()].name, 'EntraDomainServices')))]",
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
             {
               "type": "Microsoft.Network/virtualNetworks",
               "apiVersion": "2023-02-01",
               "name": "[parameters('vnetName')]",
-              "location": "[parameters('region')]",
+              "location": "[variables('location')]",
               "tags": {
                 "Application": "[parameters('applicationTag')]",
                 "Function": "[parameters('functionTag')]",
@@ -583,9 +609,9 @@
                     "input": {
                       "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
                       "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]"
-                      },
-                      "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-core-management-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "networkSecurityGroup": "[if(and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex('subnets')].name, 'EntraDomainServices'))), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('vnetName')))), null())]"
+                      }
                     }
                   }
                 ],
@@ -595,20 +621,6 @@
                   ]
                 }
               }
-            },
-            {
-              "copy": {
-                "name": "nsgs",
-                "count": "[length(parameters('subnetConfig'))]"
-              },
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
-              "location": "[parameters('region')]",
-              "properties": {},
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-              ]
             }
           ],
           "outputs": {
@@ -1154,7 +1166,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "16929060171045616318"
+              "templateHash": "7391045361067519385"
             }
           },
           "parameters": {
@@ -1277,65 +1289,6 @@
           },
           "resources": [
             {
-              "copy": {
-                "name": "subnetNSGs",
-                "count": "[length(parameters('subnetConfig'))]"
-              },
-              "condition": "[and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex()].name, 'EntraDomainServices')))]",
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-{1}-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "securityRules": []
-              }
-            },
-            {
-              "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2023-02-01",
-              "name": "[parameters('vnetName')]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
-                        "networkSecurityGroup": "[if(and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex('subnets')].name, 'EntraDomainServices'))), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}-core-identity-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
-                "addressSpace": {
-                  "addressPrefixes": [
-                    "[parameters('addressPrefix')]"
-                  ]
-                }
-              }
-            },
-            {
               "condition": "[parameters('attachRouteTable')]",
               "type": "Microsoft.Network/routeTables",
               "apiVersion": "2023-02-01",
@@ -1390,17 +1343,62 @@
             },
             {
               "copy": {
-                "name": "nsgs",
+                "name": "subnetNSGs",
                 "count": "[length(parameters('subnetConfig'))]"
               },
+              "condition": "[and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex()].name, 'EntraDomainServices')))]",
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
-              "location": "[parameters('region')]",
-              "properties": {},
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-              ]
+              "name": "[format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex('subnets')].name, 'EntraDomainServices'))), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('vnetName')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
             }
           ],
           "outputs": {
@@ -1534,7 +1532,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "7163571341214887902"
+              "templateHash": "5545882632280732509"
             }
           },
           "parameters": {
@@ -1657,65 +1655,6 @@
           },
           "resources": [
             {
-              "copy": {
-                "name": "subnetNSGs",
-                "count": "[length(parameters('subnetConfig'))]"
-              },
-              "condition": "[parameters('associateNSGs')]",
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-vnet-{1}-core-management-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "securityRules": []
-              }
-            },
-            {
-              "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2023-02-01",
-              "name": "[parameters('vnetName')]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
-                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-core-management-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
-                "addressSpace": {
-                  "addressPrefixes": [
-                    "[parameters('addressPrefix')]"
-                  ]
-                }
-              }
-            },
-            {
               "condition": "[parameters('attachRouteTable')]",
               "type": "Microsoft.Network/routeTables",
               "apiVersion": "2023-02-01",
@@ -1770,17 +1709,62 @@
             },
             {
               "copy": {
-                "name": "nsgs",
+                "name": "subnetNSGs",
                 "count": "[length(parameters('subnetConfig'))]"
               },
+              "condition": "[parameters('associateNSGs')]",
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
-              "location": "[parameters('region')]",
-              "properties": {},
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-              ]
+              "name": "[format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('vnetName')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
             }
           ],
           "outputs": {
@@ -1909,7 +1893,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "15370527123016397498"
+              "templateHash": "8421056400040758944"
             }
           },
           "parameters": {
@@ -2032,65 +2016,6 @@
           },
           "resources": [
             {
-              "copy": {
-                "name": "subnetNSGs",
-                "count": "[length(parameters('subnetConfig'))]"
-              },
-              "condition": "[parameters('associateNSGs')]",
-              "type": "Microsoft.Network/networkSecurityGroups",
-              "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-vnet-{1}-sharedservices-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "securityRules": []
-              }
-            },
-            {
-              "type": "Microsoft.Network/virtualNetworks",
-              "apiVersion": "2023-02-01",
-              "name": "[parameters('vnetName')]",
-              "location": "[variables('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "copy": [
-                  {
-                    "name": "subnets",
-                    "count": "[length(parameters('subnetConfig'))]",
-                    "input": {
-                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
-                      "properties": {
-                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
-                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
-                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-sharedservices-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
-                      }
-                    }
-                  }
-                ],
-                "addressSpace": {
-                  "addressPrefixes": [
-                    "[parameters('addressPrefix')]"
-                  ]
-                }
-              }
-            },
-            {
               "condition": "[parameters('attachRouteTable')]",
               "type": "Microsoft.Network/routeTables",
               "apiVersion": "2023-02-01",
@@ -2145,17 +2070,62 @@
             },
             {
               "copy": {
-                "name": "nsgs",
+                "name": "subnetNSGs",
                 "count": "[length(parameters('subnetConfig'))]"
               },
+              "condition": "[parameters('associateNSGs')]",
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2023-02-01",
-              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
-              "location": "[parameters('region')]",
-              "properties": {},
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
-              ]
+              "name": "[format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-sharedservices-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
             }
           ],
           "outputs": {
