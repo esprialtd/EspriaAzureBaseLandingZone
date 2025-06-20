@@ -1,11 +1,12 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "languageVersion": "2.0",
   "contentVersion": "1.0.0.0",
   "metadata": {
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "10024016647907387860"
+      "templateHash": "5346595059618223667"
     }
   },
   "parameters": {
@@ -105,18 +106,6 @@
       "metadata": {
         "description": "On-premises address prefix (e.g., 10.1.0.0/16)"
       }
-    },
-    "rgCoreConnectivity": {
-      "type": "string"
-    },
-    "rgCoreIdentity": {
-      "type": "string"
-    },
-    "rgCoreManagement": {
-      "type": "string"
-    },
-    "rgSharedServices": {
-      "type": "string"
     }
   },
   "variables": {
@@ -129,10 +118,14 @@
     "vnetNameCoreConnectivity": "[format('vnet-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
     "vnetNameCoreIdentity": "[format('vnet-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
     "vnetNameCoreManagement": "[format('vnet-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
-    "vnetNameSharedServices": "[format('vnet-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+    "vnetNameSharedServices": "[format('vnet-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "rgCoreConnectivity": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "rgCoreIdentity": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "rgCoreManagement": "[format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "rgSharedServices": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
   },
-  "resources": [
-    {
+  "resources": {
+    "coreResourceGroups": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "coreResourceGroups",
@@ -291,7 +284,7 @@
         }
       }
     },
-    {
+    "sharedResourceGroups": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sharedResourceGroups",
@@ -412,12 +405,12 @@
         }
       }
     },
-    {
+    "connectivityCoreConnectivity": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "connectivityCoreConnectivity",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreConnectivity')]",
+      "resourceGroup": "[variables('rgCoreConnectivity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -479,7 +472,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "15317525901870794983"
+              "templateHash": "1607883269701512055"
             }
           },
           "parameters": {
@@ -612,7 +605,10 @@
               "apiVersion": "2023-02-01",
               "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "location": "[parameters('region')]",
-              "properties": {}
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -631,15 +627,15 @@
         }
       },
       "dependsOn": [
-        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+        "coreResourceGroups"
       ]
     },
-    {
+    "coreGateway": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "coreGateway",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreConnectivity')]",
+      "resourceGroup": "[variables('rgCoreConnectivity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -665,7 +661,7 @@
             "value": "[parameters('tagLocation')]"
           },
           "gatewaySubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.subnetIds.value.GatewaySubnet]"
+            "value": "[reference('connectivityCoreConnectivity').outputs.subnetIds.value.GatewaySubnet]"
           }
         },
         "template": {
@@ -870,16 +866,16 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+        "connectivityCoreConnectivity",
+        "coreResourceGroups"
       ]
     },
-    {
+    "coreFirewall": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "coreFirewall",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreConnectivity')]",
+      "resourceGroup": "[variables('rgCoreConnectivity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -905,7 +901,7 @@
             "value": "[parameters('tagLocation')]"
           },
           "firewallSubnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.subnetIds.value.AzureFirewallSubnet]"
+            "value": "[reference('connectivityCoreConnectivity').outputs.subnetIds.value.AzureFirewallSubnet]"
           }
         },
         "template": {
@@ -1041,16 +1037,16 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+        "connectivityCoreConnectivity",
+        "coreResourceGroups"
       ]
     },
-    {
+    "connectivityCoreIdentity": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "connectivityCoreIdentity",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreIdentity')]",
+      "resourceGroup": "[variables('rgCoreIdentity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1091,7 +1087,7 @@
             "value": "[parameters('onPremAddressPrefix')]"
           },
           "firewallPrivateIpAddress": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+            "value": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
           },
           "subnetConfig": {
             "value": [
@@ -1123,32 +1119,32 @@
                     "name": "[variables('vnetNameSharedServices')]",
                     "addressPrefix": "10.101.16.0/21",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "[variables('vnetNameCoreManagement')]",
                     "addressPrefix": "10.101.248.0/21",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-OnPrem",
                     "addressPrefix": "[parameters('onPremAddressPrefix')]",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-WAN",
                     "addressPrefix": "0.0.0.0/0",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   }
                 ]
               }
             ]
           },
           "hubVnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+            "value": "[reference('connectivityCoreConnectivity').outputs.vnetId.value]"
           }
         },
         "template": {
@@ -1158,7 +1154,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "12516534473586330243"
+              "templateHash": "16929060171045616318"
             }
           },
           "parameters": {
@@ -1401,7 +1397,10 @@
               "apiVersion": "2023-02-01",
               "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "location": "[parameters('region')]",
-              "properties": {}
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -1417,17 +1416,17 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall')]",
-        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+        "connectivityCoreConnectivity",
+        "coreFirewall",
+        "coreResourceGroups"
       ]
     },
-    {
+    "connectivityCoreManagement": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "connectivityCoreManagement",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreManagement')]",
+      "resourceGroup": "[variables('rgCoreManagement')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1465,7 +1464,7 @@
             "value": "[parameters('tagLocation')]"
           },
           "firewallPrivateIpAddress": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+            "value": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
           },
           "onPremAddressPrefix": {
             "value": "[parameters('onPremAddressPrefix')]"
@@ -1500,32 +1499,32 @@
                     "name": "[variables('vnetNameCoreIdentity')]",
                     "addressPrefix": "10.101.8.0/22",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "[variables('vnetNameSharedServices')]",
                     "addressPrefix": "10.101.16.0/21",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-OnPrem",
                     "addressPrefix": "[parameters('onPremAddressPrefix')]",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-WAN",
                     "addressPrefix": "0.0.0.0/0",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   }
                 ]
               }
             ]
           },
           "hubVnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+            "value": "[reference('connectivityCoreConnectivity').outputs.vnetId.value]"
           }
         },
         "template": {
@@ -1535,7 +1534,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "13240922570694888879"
+              "templateHash": "7163571341214887902"
             }
           },
           "parameters": {
@@ -1778,7 +1777,10 @@
               "apiVersion": "2023-02-01",
               "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "location": "[parameters('region')]",
-              "properties": {}
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -1794,17 +1796,17 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall')]",
-        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+        "connectivityCoreConnectivity",
+        "coreFirewall",
+        "coreResourceGroups"
       ]
     },
-    {
+    "connectivitySharedServices": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "sharedSconnectivitySharedServiceservices",
       "subscriptionId": "[parameters('sharedSubscriptionId')]",
-      "resourceGroup": "[parameters('rgSharedServices')]",
+      "resourceGroup": "[variables('rgSharedServices')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -1845,7 +1847,7 @@
             "value": "[parameters('onPremAddressPrefix')]"
           },
           "firewallPrivateIpAddress": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+            "value": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
           },
           "subnetConfig": {
             "value": [
@@ -1872,32 +1874,32 @@
                     "name": "[variables('vnetNameCoreIdentity')]",
                     "addressPrefix": "10.101.8.0/22",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "[variables('vnetNameCoreManagement')]",
                     "addressPrefix": "10.101.248.0/21",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-OnPrem",
                     "addressPrefix": "[parameters('onPremAddressPrefix')]",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   },
                   {
                     "name": "To-WAN",
                     "addressPrefix": "0.0.0.0/0",
                     "nextHopType": "VirtualAppliance",
-                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                    "nextHopIpAddress": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
                   }
                 ]
               }
             ]
           },
           "hubVnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+            "value": "[reference('connectivityCoreConnectivity').outputs.vnetId.value]"
           }
         },
         "template": {
@@ -1907,7 +1909,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "7593437957214860497"
+              "templateHash": "15370527123016397498"
             }
           },
           "parameters": {
@@ -2150,7 +2152,10 @@
               "apiVersion": "2023-02-01",
               "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
               "location": "[parameters('region')]",
-              "properties": {}
+              "properties": {},
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+              ]
             }
           ],
           "outputs": {
@@ -2166,17 +2171,17 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall')]",
-        "[subscriptionResourceId(parameters('sharedSubscriptionId'), 'Microsoft.Resources/deployments', 'sharedResourceGroups')]"
+        "connectivityCoreConnectivity",
+        "coreFirewall",
+        "sharedResourceGroups"
       ]
     },
-    {
+    "managementVm": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "managementVm",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreManagement')]",
+      "resourceGroup": "[variables('rgCoreManagement')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -2393,15 +2398,15 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreManagement')), 'Microsoft.Resources/deployments', 'connectivityCoreManagement')]"
+        "connectivityCoreManagement"
       ]
     },
-    {
+    "domainVms": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "domainVms",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreIdentity')]",
+      "resourceGroup": "[variables('rgCoreIdentity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -2658,15 +2663,15 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity')]"
+        "connectivityCoreIdentity"
       ]
     },
-    {
+    "aadds": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "aadds",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreIdentity')]",
+      "resourceGroup": "[variables('rgCoreIdentity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -2825,15 +2830,15 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity')]"
+        "connectivityCoreIdentity"
       ]
     },
-    {
+    "azureFiles": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "azureFiles",
       "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[parameters('rgCoreIdentity')]",
+      "resourceGroup": "[variables('rgCoreIdentity')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -2862,7 +2867,7 @@
             "value": "sharedfiles"
           },
           "vnetId": {
-            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.vnetId.value]"
+            "value": "[reference('connectivitySharedServices').outputs.vnetId.value]"
           }
         },
         "template": {
@@ -3062,16 +3067,16 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]",
-        "[subscriptionResourceId(parameters('sharedSubscriptionId'), 'Microsoft.Resources/deployments', 'sharedResourceGroups')]"
+        "connectivitySharedServices",
+        "sharedResourceGroups"
       ]
     },
-    {
+    "fileServer": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "fileServer",
       "subscriptionId": "[parameters('sharedSubscriptionId')]",
-      "resourceGroup": "[parameters('rgSharedServices')]",
+      "resourceGroup": "[variables('rgSharedServices')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -3301,15 +3306,15 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+        "connectivitySharedServices"
       ]
     },
-    {
+    "printServer": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "printServer",
       "subscriptionId": "[parameters('sharedSubscriptionId')]",
-      "resourceGroup": "[parameters('rgSharedServices')]",
+      "resourceGroup": "[variables('rgSharedServices')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"
@@ -3556,85 +3561,69 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+        "connectivitySharedServices"
       ]
     }
-  ],
+  },
   "outputs": {
-    "rgCoreConnectivity": {
-      "type": "string",
-      "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreConnectivity.value]"
-    },
-    "rgCoreIdentity": {
-      "type": "string",
-      "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreIdentity.value]"
-    },
-    "rgCoreManagement": {
-      "type": "string",
-      "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreManagement.value]"
-    },
-    "rgSharedServices": {
-      "type": "string",
-      "value": "[reference(subscriptionResourceId(parameters('sharedSubscriptionId'), 'Microsoft.Resources/deployments', 'sharedResourceGroups'), '2022-09-01').outputs.rgSharedServices.value]"
-    },
     "coreVNetId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+      "value": "[reference('connectivityCoreConnectivity').outputs.vnetId.value]"
     },
     "identityVNetId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity'), '2022-09-01').outputs.vnetId.value]"
+      "value": "[reference('connectivityCoreIdentity').outputs.vnetId.value]"
     },
     "managementVNetId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreManagement')), 'Microsoft.Resources/deployments', 'connectivityCoreManagement'), '2022-09-01').outputs.vnetId.value]"
+      "value": "[reference('connectivityCoreManagement').outputs.vnetId.value]"
     },
     "sharedServicesVNetId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.vnetId.value]"
+      "value": "[reference('connectivitySharedServices').outputs.vnetId.value]"
     },
     "managementVmId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreManagement')), 'Microsoft.Resources/deployments', 'managementVm'), '2022-09-01').outputs.managementServerId.value]"
+      "value": "[reference('managementVm').outputs.managementServerId.value]"
     },
     "domainVmsIds": {
       "type": "array",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'domainVms'), '2022-09-01').outputs.vmIds.value]"
+      "value": "[reference('domainVms').outputs.vmIds.value]"
     },
     "aaddsId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'aadds'), '2022-09-01').outputs.aaddsId.value]"
+      "value": "[reference('aadds').outputs.aaddsId.value]"
     },
     "azureFilesId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'azureFiles'), '2022-09-01').outputs.azureFilesId.value]"
+      "value": "[reference('azureFiles').outputs.azureFilesId.value]"
     },
     "fileServerId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'fileServer'), '2022-09-01').outputs.fileServerId.value]"
+      "value": "[reference('fileServer').outputs.fileServerId.value]"
     },
     "firewallId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallId.value]"
+      "value": "[reference('coreFirewall').outputs.firewallId.value]"
     },
     "firewallPrivateIpAddress": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+      "value": "[reference('coreFirewall').outputs.firewallPrivateIpAddress.value]"
     },
     "virtualNetworkGatewayId": {
       "type": "string",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreGateway'), '2022-09-01').outputs.virtualNetworkGatewayId.value]"
+      "value": "[reference('coreGateway').outputs.virtualNetworkGatewayId.value]"
     },
     "virtualNetworkGatewayPublicIpId": {
       "type": "array",
-      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreConnectivity')), 'Microsoft.Resources/deployments', 'coreGateway'), '2022-09-01').outputs.virtualNetworkGatewayPublicIpIds.value]"
+      "value": "[reference('coreGateway').outputs.virtualNetworkGatewayPublicIpIds.value]"
     },
     "routeTableIds": {
       "type": "object",
       "value": {
-        "identity": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreIdentity')), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity'), '2022-09-01').outputs.routeTableIds.value]",
-        "management": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('coreSubscriptionId'), parameters('rgCoreManagement')), 'Microsoft.Resources/deployments', 'connectivityCoreManagement'), '2022-09-01').outputs.routeTableIds.value]",
-        "shared": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedSubscriptionId'), parameters('rgSharedServices')), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.routeTableIds.value]"
+        "identity": "[reference('connectivityCoreIdentity').outputs.routeTableIds.value]",
+        "management": "[reference('connectivityCoreManagement').outputs.routeTableIds.value]",
+        "shared": "[reference('connectivitySharedServices').outputs.routeTableIds.value]"
       }
     }
   }
