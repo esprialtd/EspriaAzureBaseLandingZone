@@ -135,11 +135,11 @@ module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnec
     subnetConfig: [
       {
         name: 'GatewaySubnet'
-        addressPrefix: '10.101.0.0/27'      
+        addressPrefix: '10.101.0.0/26'      
       }
       {
         name: 'AzureFirewallSubnet'
-        addressPrefix: '10.101.1.0/24'
+        addressPrefix: '10.101.0.65/26'
       }
       {
         name: 'CoreServices'

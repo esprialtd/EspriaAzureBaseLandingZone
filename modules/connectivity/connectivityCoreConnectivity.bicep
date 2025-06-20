@@ -63,15 +63,19 @@ resource vnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
     subnets: [
       {
         name: 'GatewaySubnet'
-        properties: { addressPrefix: '10.101.1.0/27' }
+        properties: { addressPrefix: '10.101.0.0/26' }
       }
       {
         name: 'AzureFirewallSubnet'
-        properties: { addressPrefix: '10.101.2.0/26' }
+        properties: { addressPrefix: '10.101.0.65/26' }
+      }
+      {
+        name: 'CoreServices'
+        properties: { addressPrefix: '10.101.2.0/24' }
       }
       {
         name: 'PrivateEndpoint'
-        properties: { addressPrefix: '10.101.11.0/24' }
+        properties: { addressPrefix: '10.101.7.0/24' }
       }
     ]
   }
