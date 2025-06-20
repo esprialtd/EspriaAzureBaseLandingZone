@@ -1,8 +1,8 @@
 // modules/identity/connectivityCoreIdentity.bicep
-@description('Route tables to assign to subnets')
-param routeTables array = []
+@description('Configuration for RTs to create & associate')
+param routeTables array
 
-@description('Hub VNet ID for peering')
+@description('Hub VNet ID')
 param hubVnetId string
 
 @description('Customer abbreviation')

@@ -1,4 +1,9 @@
 // modules/management/connectivityCoreManagement.bicep
+@description('Configuration for RTs to create & associate')
+param routeTables array
+
+@description('Hub VNet ID')
+param hubVnetId string
 
 @description('Customer abbreviation')
 param customerAbbreviation string

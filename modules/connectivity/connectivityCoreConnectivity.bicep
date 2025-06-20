@@ -1,5 +1,4 @@
 // modules/connectivity/connectivityCoreConnectivity.bicep
-
 @description('Azure region')
 param region string
 

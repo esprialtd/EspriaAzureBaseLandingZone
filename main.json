@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "698169564812572041"
+      "templateHash": "10024016647907387860"
     }
   },
   "parameters": {
@@ -107,20 +107,16 @@
       }
     },
     "rgCoreConnectivity": {
-      "type": "string",
-      "defaultValue": "rgCoreConnectivity1"
+      "type": "string"
     },
     "rgCoreIdentity": {
-      "type": "string",
-      "defaultValue": "rgCoreIdentity1"
-    },
-    "rgSharedServices": {
-      "type": "string",
-      "defaultValue": "rgSharedServices1"
+      "type": "string"
     },
     "rgCoreManagement": {
-      "type": "string",
-      "defaultValue": "rgCoreManagement1"
+      "type": "string"
+    },
+    "rgSharedServices": {
+      "type": "string"
     }
   },
   "variables": {
@@ -1162,21 +1158,20 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "3332959264621061528"
+              "templateHash": "12516534473586330243"
             }
           },
           "parameters": {
             "routeTables": {
               "type": "array",
-              "defaultValue": [],
               "metadata": {
-                "description": "Route tables to assign to subnets"
+                "description": "Configuration for RTs to create & associate"
               }
             },
             "hubVnetId": {
               "type": "string",
               "metadata": {
-                "description": "Hub VNet ID for peering"
+                "description": "Hub VNet ID"
               }
             },
             "customerAbbreviation": {
@@ -1540,21 +1535,20 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "14537798407021337752"
+              "templateHash": "13240922570694888879"
             }
           },
           "parameters": {
             "routeTables": {
               "type": "array",
-              "defaultValue": [],
               "metadata": {
-                "description": "Route tables to assign to subnets"
+                "description": "Configuration for RTs to create & associate"
               }
             },
             "hubVnetId": {
               "type": "string",
               "metadata": {
-                "description": "Hub VNet ID for peering"
+                "description": "Hub VNet ID"
               }
             },
             "customerAbbreviation": {
@@ -1913,21 +1907,20 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1720986623357238357"
+              "templateHash": "7593437957214860497"
             }
           },
           "parameters": {
             "routeTables": {
               "type": "array",
-              "defaultValue": [],
               "metadata": {
-                "description": "Route tables to assign to subnets"
+                "description": "Configuration for RTs to create & associate"
               }
             },
             "hubVnetId": {
               "type": "string",
               "metadata": {
-                "description": "Hub VNet ID for peering"
+                "description": "Hub VNet ID"
               }
             },
             "customerAbbreviation": {
@@ -3568,15 +3561,15 @@
     }
   ],
   "outputs": {
-    "rgCoreConnectivity1": {
+    "rgCoreConnectivity": {
       "type": "string",
       "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreConnectivity.value]"
     },
-    "rgCoreIdentity1": {
+    "rgCoreIdentity": {
       "type": "string",
       "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreIdentity.value]"
     },
-    "rgCoreManagement1": {
+    "rgCoreManagement": {
       "type": "string",
       "value": "[reference(subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups'), '2022-09-01').outputs.rgCoreManagement.value]"
     },
