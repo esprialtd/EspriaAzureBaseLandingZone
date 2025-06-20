@@ -53,6 +53,9 @@ param subnetConfig array
 @description('Private IP address of the Azure Firewall')
 param firewallPrivateIpAddress string
 
+@description('List of subnet names NOT to associate NSGs to')
+param excludeFromNsg array = []
+
 var location = region
 
 // Route table creation
@@ -107,58 +110,65 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   }
 }
 
-// NSG Creation for subnets
-resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs && subnet.name != 'EntraDomainServices') {
-  name: 'nsg-${subnet.name}-${vnetName}'
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    securityRules: []
-  }
-}]
-
-// VNet with subnet NSG/RT associations
+// 1. Create the VNet and subnets (only address prefixes and route tables)
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: location
   tags: {
     Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
     Environment: environment
-    Location: tagLocation
+    Location:    tagLocation
   }
   properties: {
     addressSpace: {
-      addressPrefixes: [
-        addressPrefix
-      ]
+      addressPrefixes: [addressPrefix]
     }
-    subnets: [for subnet in subnetConfig: {
-      name: subnet.name
-      properties: {
-        addressPrefix: subnet.addressPrefix
-        routeTable: attachRouteTable ? {
+    subnets: [
+      for subnet in subnetConfig: {
+        name: subnet.name
+        properties: {
+          addressPrefix: subnet.addressPrefix
+          routeTable: attachRouteTable ? {
           id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub')
         } : null
-        networkSecurityGroup: (associateNSGs && subnet.name != 'EntraDomainServices') ? {
-          id: resourceId(
-            'Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
-        } : null
+        }
       }
-    }]
+    ]
   }
 }
+
+// 2. Create NSGs for each subnet
+resource nsgCollection 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [
+  for sn in subnetConfig: if (associateNSGs && !contains(excludeFromNsg, sn.name)) {
+  name: 'nsg-${sn.name}-${vnetName}'
+  location: location
+  tags: {
+    Application: applicationTag
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
+    Environment: environment
+    Location:    tagLocation
+  }
+  properties: {}
+}]
+
+// 3. Associate NSGs to subnets via child resource, ensuring subnets & NSGs exist first
+resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [
+  for sn in subnetConfig: if (associateNSGs && !contains(excludeFromNsg, sn.name)) {  parent: vnet
+  name: sn.name
+  properties: {
+    networkSecurityGroup: {
+      id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${sn.name}-${vnetName}')
+    }
+  }
+  dependsOn: [ vnet, nsgCollection ]
+}]
 
 
 

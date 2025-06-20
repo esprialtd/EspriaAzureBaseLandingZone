@@ -107,58 +107,65 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   }
 }
 
-// NSG for subnets creation
-resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
-  name: 'nsg-${subnet.name}-${vnetName}'
-  location: location
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
-  }
-  properties: {
-    securityRules: []
-  }
-}]
 
-// VNet with subnet NSG/RT associations
+// 1. Create the VNet and subnets (only address prefixes and route tables)
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: location
   tags: {
     Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
     Environment: environment
-    Location: tagLocation
+    Location:    tagLocation
   }
   properties: {
     addressSpace: {
-    addressPrefixes: [addressPrefix]
+      addressPrefixes: [addressPrefix]
     }
-    subnets: [for subnet in subnetConfig: {
-      name: subnet.name
-      properties: {
-        addressPrefix: subnet.addressPrefix
-        routeTable: attachRouteTable ? {
+    subnets: [
+      for subnet in subnetConfig: {
+        name: subnet.name
+        properties: {
+          addressPrefix: subnet.addressPrefix
+          routeTable: attachRouteTable ? {
           id: resourceId('Microsoft.Network/routeTables', 'rt-${environment}-core-management-${customerAbbreviation}-${region}-hub')
         } : null
-        networkSecurityGroup: associateNSGs ? {
-          id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
-        } : null
+        }
       }
-    }]
+    ]
   }
 }
 
+// 2. Create NSGs for each subnet
+resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+  name: 'nsg-${subnet.name}-${vnetName}'
+  location: location
+  tags: {
+    Application: applicationTag
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
+    Environment: environment
+    Location:    tagLocation
+  }
+  properties: {}
+}]
 
-
+// 3. Associate NSGs to subnets via child resource, ensuring subnets & NSGs exist first
+resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+  parent: vnet
+  name: subnet.name
+  properties: {
+    networkSecurityGroup: {
+      id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${subnet.name}-${vnetName}')
+    }
+  }
+  dependsOn: [ vnet, subnetNSGs ]
+}]
 
 
 output vnetId string = vnet.id

@@ -128,6 +128,10 @@ module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnec
     createdBy: createdBy
     managedBy: managedBy
     tagLocation: tagLocation
+    excludeFromNsg : [
+      'GatewaySubnet'
+      'AzureFirewallSubnet'
+    ]
     subnetConfig: [
       {
         name: 'GatewaySubnet'
@@ -203,6 +207,9 @@ module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep
     tagLocation: tagLocation
     onPremAddressPrefix: onPremAddressPrefix
     firewallPrivateIpAddress: firewallPrivateIp
+    excludeFromNsg : [
+      'EntraDomainServices'
+    ]
     subnetConfig: [
       {
         name: 'DomainControllers'
