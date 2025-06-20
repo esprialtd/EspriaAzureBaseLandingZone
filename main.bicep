@@ -2,9 +2,6 @@
 // ------------------------------------
 // main.bicep - Root orchestration for cross-subscription base landing zone
 
-@description('Customer full name (e.g., Espria)')
-param customerName string
-
 @description('Customer abbreviation (e.g., ESP)')
 param customerAbbreviation string
 
@@ -56,14 +53,6 @@ param adminPassword string
 @description('On-premises address prefix (e.g., 10.1.0.0/16)')
 param onPremAddressPrefix string = '10.1.0.0/16'
 
-@description('Top-level management group display name')
-param topLevelGroupName string = '${customerAbbreviation} - Internal'
-
-@description('Core services management group display name')
-param coreServicesGroupName string = '${customerAbbreviation} - Internal - Core Services'
-
-@description('Shared services management group display name')
-param sharedServicesGroupName string = '${customerAbbreviation} - Internal - Shared Services'
 
 // Network Variables
 
@@ -114,27 +103,19 @@ module sharedResourceGroups 'modules/sharedResourceGroups.bicep' = {
 
 
 // Management Groups
-module managementGroups 'modules/managementGroups.bicep' = {
-  name: 'managementGroups'
-  scope: tenant()
-  params: {
-    customerName: customerName
-    customerAbbreviation: customerAbbreviation
-    topLevelGroupName: topLevelGroupName
-    coreServicesGroupName: coreServicesGroupName
-    sharedServicesGroupName: sharedServicesGroupName
-    coreSubscriptionId: coreSubscriptionId
-    sharedSubscriptionId: sharedSubscriptionId
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-  }
-}
+// module managementGroups 'modules/managementGroups.bicep' = {
+//   name: 'managementGroups'
+//   scope: tenant()
+//   params: {
+//     customerName: customerName
+//   }
+// }
 
 // Core Connectivity Hub VNet (10.101.0.0/21)
 module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnectivity.bicep' = {
   name: 'connectivityCoreConnectivity'
   scope: resourceGroup('rg-${environment}-core-connectivity-${customerAbbreviation}-${region}-01')
+  dependsOn: [coreResourceGroups]
   params: {
     region: region
     environment: environment
@@ -169,6 +150,7 @@ module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnec
 module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
   name: 'coreGateway'
   scope: resourceGroup('rg-${environment}-core-connectivity-${customerAbbreviation}-${region}-01')
+  dependsOn: [coreResourceGroups]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -184,6 +166,7 @@ module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
 module coreFirewall 'modules/connectivity/azFirewall.bicep' = {
   name: 'coreFirewall'
   scope: resourceGroup('rg-${environment}-core-connectivity-${customerAbbreviation}-${region}-01')
+  dependsOn: [coreResourceGroups]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -203,6 +186,7 @@ var firewallPrivateIp = coreFirewall.outputs.firewallPrivateIpAddress
 module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
   name: 'connectivityCoreIdentity'
   scope: resourceGroup('rg-${environment}-core-identity-${customerAbbreviation}-${region}-01')
+  dependsOn: [coreResourceGroups]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -275,6 +259,7 @@ module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep
 module connectivityCoreManagement 'modules/management/connectivityCoreManagement.bicep' = {
   name: 'connectivityCoreManagement'
   scope: resourceGroup('rg-${environment}-core-management-${customerAbbreviation}-${region}-01')
+  dependsOn: [coreResourceGroups]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -347,6 +332,7 @@ module connectivityCoreManagement 'modules/management/connectivityCoreManagement
 module connectivitySharedServices 'modules/shared/connectivitySharedServices.bicep' = {
   name: 'sharedSconnectivitySharedServiceservices'
   scope: resourceGroup('rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01')
+  dependsOn: [sharedResourceGroups]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -414,6 +400,7 @@ module connectivitySharedServices 'modules/shared/connectivitySharedServices.bic
 module managementVm 'modules/management/managementVm.bicep' = {
   name: 'managementVm'
   scope: resourceGroup('rg-${environment}-core-management-${customerAbbreviation}-${region}-01')
+  dependsOn: [connectivityCoreManagement]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -431,6 +418,7 @@ module managementVm 'modules/management/managementVm.bicep' = {
 module domainVms 'modules/identity/domainVms.bicep' = {
   name: 'domainVms'
   scope: resourceGroup('rg-${environment}-core-identity-${customerAbbreviation}-${region}-01')
+  dependsOn: [connectivityCoreIdentity]
   params: {
     customerAbbreviation: customerAbbreviation
     region: region
@@ -449,6 +437,7 @@ module domainVms 'modules/identity/domainVms.bicep' = {
 module aadds 'modules/identity/aadds.bicep' = {
   name: 'aadds'
   scope: resourceGroup('rg-${environment}-core-identity-${customerAbbreviation}-${region}-01')
+  dependsOn: [connectivityCoreIdentity]
   params: {
     region: region
     domainName: '${customerAbbreviation}.local'
@@ -464,6 +453,7 @@ module aadds 'modules/identity/aadds.bicep' = {
 module azureFiles 'modules/shared/azureFiles.bicep' = {
   name: 'azureFiles'
   scope: resourceGroup('rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01')
+  dependsOn: [sharedResourceGroups]
   params: {
     region: region
     createdBy: createdBy
@@ -479,6 +469,7 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
 module fileServer 'modules/shared/fileVm.bicep' = {
   name: 'fileServer'
   scope: resourceGroup('rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01')
+  dependsOn: [connectivitySharedServices]
   params: {
     vnetName: vnetNameSharedServices
     subnetName: 'SharedServices'
@@ -497,6 +488,7 @@ module fileServer 'modules/shared/fileVm.bicep' = {
 module printServer 'modules/shared/printVm.bicep' = {
   name: 'printServer'
   scope: resourceGroup('rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01')
+  dependsOn: [connectivitySharedServices]
   params: {
     vnetName: vnetNameSharedServices
     subnetName: 'SharedServices'

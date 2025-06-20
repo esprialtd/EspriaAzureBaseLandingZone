@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "5386026330280233227"
+      "templateHash": "9360961897269595244"
     }
   },
   "parameters": {
@@ -110,27 +110,6 @@
       "defaultValue": "10.1.0.0/16",
       "metadata": {
         "description": "On-premises address prefix (e.g., 10.1.0.0/16)"
-      }
-    },
-    "topLevelGroupName": {
-      "type": "string",
-      "defaultValue": "[format('{0} - Internal', parameters('customerAbbreviation'))]",
-      "metadata": {
-        "description": "Top-level management group display name"
-      }
-    },
-    "coreServicesGroupName": {
-      "type": "string",
-      "defaultValue": "[format('{0} - Internal - Core Services', parameters('customerAbbreviation'))]",
-      "metadata": {
-        "description": "Core services management group display name"
-      }
-    },
-    "sharedServicesGroupName": {
-      "type": "string",
-      "defaultValue": "[format('{0} - Internal - Shared Services', parameters('customerAbbreviation'))]",
-      "metadata": {
-        "description": "Shared services management group display name"
       }
     }
   },
@@ -430,186 +409,6 @@
     {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
-      "name": "managementGroups",
-      "scope": "/",
-      "location": "[resourceGroup().location]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "customerName": {
-            "value": "[parameters('customerName')]"
-          },
-          "customerAbbreviation": {
-            "value": "[parameters('customerAbbreviation')]"
-          },
-          "topLevelGroupName": {
-            "value": "[parameters('topLevelGroupName')]"
-          },
-          "coreServicesGroupName": {
-            "value": "[parameters('coreServicesGroupName')]"
-          },
-          "sharedServicesGroupName": {
-            "value": "[parameters('sharedServicesGroupName')]"
-          },
-          "coreSubscriptionId": {
-            "value": "[parameters('coreSubscriptionId')]"
-          },
-          "sharedSubscriptionId": {
-            "value": "[parameters('sharedSubscriptionId')]"
-          },
-          "createdBy": {
-            "value": "[parameters('createdBy')]"
-          },
-          "managedBy": {
-            "value": "[parameters('managedBy')]"
-          },
-          "tagLocation": {
-            "value": "[parameters('tagLocation')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.36.1.42791",
-              "templateHash": "13448520602016563248"
-            }
-          },
-          "parameters": {
-            "customerName": {
-              "type": "string",
-              "metadata": {
-                "description": "Customer name (e.g., Espria)"
-              }
-            },
-            "topLevelGroupId": {
-              "type": "string",
-              "defaultValue": "[toLower(replace(format('{0}-Internal', parameters('customerName')), ' ', '-'))]",
-              "metadata": {
-                "description": "Top-level management group ID"
-              }
-            },
-            "coreGroupId": {
-              "type": "string",
-              "defaultValue": "[toLower(replace(format('{0}-Core-Services', parameters('customerName')), ' ', '-'))]",
-              "metadata": {
-                "description": "Core services management group ID"
-              }
-            },
-            "sharedGroupId": {
-              "type": "string",
-              "defaultValue": "[toLower(replace(format('{0}-Shared-Services', parameters('customerName')), ' ', '-'))]",
-              "metadata": {
-                "description": "Shared services management group ID"
-              }
-            },
-            "customerAbbreviation": {
-              "type": "string",
-              "metadata": {
-                "description": "Customer abbreviation (e.g., ESP)"
-              }
-            },
-            "topLevelGroupName": {
-              "type": "string",
-              "defaultValue": "[format('{0} - Internal', parameters('customerAbbreviation'))]",
-              "metadata": {
-                "description": "Top-level management group name"
-              }
-            },
-            "coreServicesGroupName": {
-              "type": "string",
-              "defaultValue": "[format('{0} - Internal - Core Services', parameters('customerAbbreviation'))]",
-              "metadata": {
-                "description": "Core services management group name"
-              }
-            },
-            "sharedServicesGroupName": {
-              "type": "string",
-              "defaultValue": "[format('{0} - Internal - Shared Services', parameters('customerAbbreviation'))]",
-              "metadata": {
-                "description": "Shared services management group name"
-              }
-            },
-            "coreSubscriptionId": {
-              "type": "string",
-              "metadata": {
-                "description": "Core Subscription ID"
-              }
-            },
-            "sharedSubscriptionId": {
-              "type": "string",
-              "metadata": {
-                "description": "Shared Subscription ID"
-              }
-            },
-            "createdBy": {
-              "type": "string",
-              "metadata": {
-                "description": "CreatedBy tag value"
-              }
-            },
-            "managedBy": {
-              "type": "string",
-              "metadata": {
-                "description": "ManagedBy tag value"
-              }
-            },
-            "tagLocation": {
-              "type": "string",
-              "metadata": {
-                "description": "Location tag value"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Management/managementGroups",
-              "apiVersion": "2020-05-01",
-              "name": "[parameters('topLevelGroupId')]",
-              "properties": {
-                "displayName": "[format('{0} - Internal', parameters('customerName'))]"
-              }
-            },
-            {
-              "type": "Microsoft.Management/managementGroups",
-              "apiVersion": "2020-05-01",
-              "name": "[parameters('coreGroupId')]",
-              "properties": {
-                "displayName": "[format('{0} - Internal - Core Services', parameters('customerName'))]",
-                "parent": {
-                  "id": "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
-                }
-              },
-              "dependsOn": [
-                "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
-              ]
-            },
-            {
-              "type": "Microsoft.Management/managementGroups",
-              "apiVersion": "2020-05-01",
-              "name": "[parameters('sharedGroupId')]",
-              "properties": {
-                "displayName": "[format('{0} - Internal - Shared Services', parameters('customerName'))]",
-                "parent": {
-                  "id": "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
-                }
-              },
-              "dependsOn": [
-                "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
-              ]
-            }
-          ]
-        }
-      }
-    },
-    {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
       "name": "connectivityCoreConnectivity",
       "resourceGroup": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
       "properties": {
@@ -812,7 +611,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1049,7 +851,8 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
+        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
       ]
     },
     {
@@ -1218,7 +1021,8 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
+        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
       ]
     },
     {
@@ -1594,7 +1398,8 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]",
+        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
       ]
     },
     {
@@ -1970,7 +1775,8 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]",
+        "[subscriptionResourceId(parameters('coreSubscriptionId'), 'Microsoft.Resources/deployments', 'coreResourceGroups')]"
       ]
     },
     {
@@ -2341,7 +2147,8 @@
       },
       "dependsOn": [
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]",
+        "[subscriptionResourceId(parameters('sharedSubscriptionId'), 'Microsoft.Resources/deployments', 'sharedResourceGroups')]"
       ]
     },
     {
@@ -2563,7 +2370,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreManagement')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -2824,7 +2634,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -2987,7 +2800,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -3222,7 +3038,8 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]",
+        "[subscriptionResourceId(parameters('sharedSubscriptionId'), 'Microsoft.Resources/deployments', 'sharedResourceGroups')]"
       ]
     },
     {
@@ -3457,7 +3274,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -3708,7 +3528,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+      ]
     }
   ],
   "outputs": {
