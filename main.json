@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "2332243941259150951"
+      "templateHash": "586179778952378751"
     }
   },
   "parameters": {
@@ -478,7 +478,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "18421506209042189159"
+              "templateHash": "9408802119044303340"
             }
           },
           "parameters": {
@@ -613,7 +613,7 @@
                   {
                     "name": "PrivateEndpoint",
                     "properties": {
-                      "addressPrefix": "10.101.11.0/24"
+                      "addressPrefix": "10.101.7.0/24"
                     }
                   }
                 ]
@@ -1604,7 +1604,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "16467354299013764058"
+              "templateHash": "14242849782927595915"
             }
           },
           "parameters": {
@@ -1809,7 +1809,7 @@
                   {
                     "name": "AzureBastionSubnet",
                     "properties": {
-                      "addressPrefix": "10.101.247.0/27"
+                      "addressPrefix": "10.101.249.0/27"
                     }
                   },
                   {

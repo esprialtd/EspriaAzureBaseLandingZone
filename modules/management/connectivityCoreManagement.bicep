@@ -132,7 +132,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       }
       {
         name: 'AzureBastionSubnet'
-        properties: { addressPrefix: '10.101.247.0/27' }
+        properties: { addressPrefix: '10.101.249.0/27' }
       }
       {
         name: 'PrivateEndpoints'
