@@ -6,9 +6,6 @@ param region string
 @description('Storage account name (must be globally unique)')
 param storageAccountName string
 
-@description('Customer Abbreviation')
-param customerAbbreviation string
-
 @description('Share name for Azure Files')
 param fileShareName string = 'sharedfiles'
 
@@ -21,18 +18,6 @@ param vnetId string
 @description('Name of the subnet for the private endpoint')
 param privateEndpointSubnetName string = 'PrivateEndpoint'
 
-@description('Resource group for private DNS zones')
-param dnsZoneResourceGroup string
-
-@description('vnet Name')
-param vnetName string = 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
-
-@description('Subnet Name')
-param subnetName string = 'SharedServices'
-
-@description('Shared Subscription ID')
-param sharedSubscriptionId string
-
 @description('CreatedBy tag value')
 param createdBy string
 
@@ -42,11 +27,31 @@ param managedBy string
 @description('Location tag value')
 param tagLocation string
 
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
+
+@description('Function tag') 
+param functionTag string = 'Core Management'
+
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
+
+@description('Environment tag')
+param environment string
 
 
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
   name: storageAccountName
   location: region
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
   sku: {
     name: skuName
   }
@@ -107,3 +112,4 @@ resource dnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2
 }
 
 output fileShareId string = fileShare.id
+output azureFilesId string = storageAccount.id

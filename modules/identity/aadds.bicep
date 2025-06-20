@@ -3,9 +3,6 @@
 @description('Azure region')
 param region string
 
-@description('Resource group name for AAD DS')
-param resourceGroupName string
-
 @description('Domain name for Entra Domain Services')
 param domainName string
 
@@ -63,8 +60,8 @@ resource domainServices 'Microsoft.AAD/domainServices@2021-05-01' = {
       pfxCertificatePassword: '' // Replace with secure reference
     }
     notificationSettings: {
-      notifyGlobalAdmins: true
-      notifyDcAdmins: true
+      notifyGlobalAdmins: 'true'
+      notifyDcAdmins: 'true'
     }
   }
 }

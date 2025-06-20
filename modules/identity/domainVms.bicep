@@ -44,7 +44,7 @@ param applicationTag string = 'Domain Controller'
 param functionTag string = 'Identity Services'
 
 @description('CostCenter tag value')
-param costCenterTag string = 'Core Sercices'
+param costCenterTag string = 'Core Services'
 
 var zones = ['1', '2']
 
@@ -120,4 +120,9 @@ resource vms 'Microsoft.Compute/virtualMachines@2023-03-01' = [for i in range(0,
     }
   }
   dependsOn: [nic[i]]
-}]
+}
+]
+
+output vmIds array = [for i in range(0, 2): vms[i].id]
+
+

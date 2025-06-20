@@ -1,74 +1,3776 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.1.42791",
+      "templateHash": "5386026330280233227"
+    }
+  },
   "parameters": {
     "customerName": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Customer full name (e.g., Espria)"
+      }
     },
     "customerAbbreviation": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Customer abbreviation (e.g., ESP)"
+      }
     },
     "region": {
       "type": "string",
+      "defaultValue": "uksouth",
       "allowedValues": [
         "uksouth",
         "ukwest",
         "northeurope",
         "westeurope"
       ],
-      "defaultValue": "uksouth"
+      "metadata": {
+        "description": "Azure region (e.g., uksouth, ukwest)"
+      }
     },
     "location": {
       "type": "string",
-      "defaultValue": "[parameters('region')]"
+      "defaultValue": "[parameters('region')]",
+      "metadata": {
+        "description": "Location for deployments"
+      }
+    },
+    "regionAbbreviation": {
+      "type": "string",
+      "defaultValue": "[toUpper(take(parameters('region'), 2))]",
+      "metadata": {
+        "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
+      }
     },
     "environment": {
       "type": "string",
+      "defaultValue": "prod",
       "allowedValues": [
         "prod",
         "dev",
         "uat"
       ],
-      "defaultValue": "prod"
+      "metadata": {
+        "description": "Environment (e.g., prod, dev, uat)"
+      }
     },
     "coreSubscriptionId": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Core services subscription ID"
+      }
     },
     "sharedSubscriptionId": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Shared services subscription ID"
+      }
     },
     "createdBy": {
       "type": "string",
-      "defaultValue": "Espria Ltd"
+      "defaultValue": "Espria Ltd",
+      "metadata": {
+        "description": "CreatedBy tag value"
+      }
     },
     "managedBy": {
       "type": "string",
-      "defaultValue": "Espria Ltd"
+      "defaultValue": "Espria Ltd",
+      "metadata": {
+        "description": "ManagedBy tag value"
+      }
     },
     "tagLocation": {
       "type": "string",
-      "defaultValue": "UK South"
+      "defaultValue": "UK South",
+      "metadata": {
+        "description": "Location tag value"
+      }
     },
     "adminUsername": {
-      "type": "string"
+      "type": "string",
+      "metadata": {
+        "description": "Admin username for VMs"
+      }
     },
     "adminPassword": {
-      "type": "securestring"
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for VMs"
+      }
     },
     "onPremAddressPrefix": {
       "type": "string",
-      "defaultValue": "10.1.0.0/16"
+      "defaultValue": "10.1.0.0/16",
+      "metadata": {
+        "description": "On-premises address prefix (e.g., 10.1.0.0/16)"
+      }
     },
     "topLevelGroupName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "[format('{0} - Internal', parameters('customerAbbreviation'))]",
+      "metadata": {
+        "description": "Top-level management group display name"
+      }
     },
     "coreServicesGroupName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "[format('{0} - Internal - Core Services', parameters('customerAbbreviation'))]",
+      "metadata": {
+        "description": "Core services management group display name"
+      }
     },
     "sharedServicesGroupName": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "[format('{0} - Internal - Shared Services', parameters('customerAbbreviation'))]",
+      "metadata": {
+        "description": "Shared services management group display name"
+      }
     }
   },
-  "resources": [],
-  "outputs": {}
+  "variables": {
+    "addressPrefixes": {
+      "coreConnectivity": "10.101.0.0/21",
+      "coreIdentity": "10.101.8.0/22",
+      "coreManagement": "10.101.248.0/21",
+      "sharedServices": "10.101.16.0/21"
+    },
+    "vnetNameCoreConnectivity": "[format('vnet-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "vnetNameCoreIdentity": "[format('vnet-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "vnetNameCoreManagement": "[format('vnet-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+    "vnetNameSharedServices": "[format('vnet-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "coreResourceGroups",
+      "subscriptionId": "[parameters('coreSubscriptionId')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "11472782349689029202"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag value"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Region short name"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2021-04-01",
+              "name": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "Routing and Connectivity",
+                "Function": "Core Connectivity",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2021-04-01",
+              "name": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "Identity and Access Management",
+                "Function": "Core Identity",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            },
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2021-04-01",
+              "name": "[format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "Management and Monitoring",
+                "Function": "Core Management",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            }
+          ],
+          "outputs": {
+            "rgCoreConnectivity": {
+              "type": "string",
+              "value": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+            },
+            "rgCoreIdentity": {
+              "type": "string",
+              "value": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+            },
+            "rgCoreManagement": {
+              "type": "string",
+              "value": "[format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sharedResourceGroups",
+      "subscriptionId": "[parameters('sharedSubscriptionId')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "6696459107206457682"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag value"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Region short name"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Resources/resourceGroups",
+              "apiVersion": "2021-04-01",
+              "name": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "Shared Services",
+                "Function": "Shared Services",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            }
+          ],
+          "outputs": {
+            "rgSharedServices": {
+              "type": "string",
+              "value": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "managementGroups",
+      "scope": "/",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerName": {
+            "value": "[parameters('customerName')]"
+          },
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "topLevelGroupName": {
+            "value": "[parameters('topLevelGroupName')]"
+          },
+          "coreServicesGroupName": {
+            "value": "[parameters('coreServicesGroupName')]"
+          },
+          "sharedServicesGroupName": {
+            "value": "[parameters('sharedServicesGroupName')]"
+          },
+          "coreSubscriptionId": {
+            "value": "[parameters('coreSubscriptionId')]"
+          },
+          "sharedSubscriptionId": {
+            "value": "[parameters('sharedSubscriptionId')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-08-01/tenantDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "13448520602016563248"
+            }
+          },
+          "parameters": {
+            "customerName": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer name (e.g., Espria)"
+              }
+            },
+            "topLevelGroupId": {
+              "type": "string",
+              "defaultValue": "[toLower(replace(format('{0}-Internal', parameters('customerName')), ' ', '-'))]",
+              "metadata": {
+                "description": "Top-level management group ID"
+              }
+            },
+            "coreGroupId": {
+              "type": "string",
+              "defaultValue": "[toLower(replace(format('{0}-Core-Services', parameters('customerName')), ' ', '-'))]",
+              "metadata": {
+                "description": "Core services management group ID"
+              }
+            },
+            "sharedGroupId": {
+              "type": "string",
+              "defaultValue": "[toLower(replace(format('{0}-Shared-Services', parameters('customerName')), ' ', '-'))]",
+              "metadata": {
+                "description": "Shared services management group ID"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation (e.g., ESP)"
+              }
+            },
+            "topLevelGroupName": {
+              "type": "string",
+              "defaultValue": "[format('{0} - Internal', parameters('customerAbbreviation'))]",
+              "metadata": {
+                "description": "Top-level management group name"
+              }
+            },
+            "coreServicesGroupName": {
+              "type": "string",
+              "defaultValue": "[format('{0} - Internal - Core Services', parameters('customerAbbreviation'))]",
+              "metadata": {
+                "description": "Core services management group name"
+              }
+            },
+            "sharedServicesGroupName": {
+              "type": "string",
+              "defaultValue": "[format('{0} - Internal - Shared Services', parameters('customerAbbreviation'))]",
+              "metadata": {
+                "description": "Shared services management group name"
+              }
+            },
+            "coreSubscriptionId": {
+              "type": "string",
+              "metadata": {
+                "description": "Core Subscription ID"
+              }
+            },
+            "sharedSubscriptionId": {
+              "type": "string",
+              "metadata": {
+                "description": "Shared Subscription ID"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Management/managementGroups",
+              "apiVersion": "2020-05-01",
+              "name": "[parameters('topLevelGroupId')]",
+              "properties": {
+                "displayName": "[format('{0} - Internal', parameters('customerName'))]"
+              }
+            },
+            {
+              "type": "Microsoft.Management/managementGroups",
+              "apiVersion": "2020-05-01",
+              "name": "[parameters('coreGroupId')]",
+              "properties": {
+                "displayName": "[format('{0} - Internal - Core Services', parameters('customerName'))]",
+                "parent": {
+                  "id": "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
+                }
+              },
+              "dependsOn": [
+                "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Management/managementGroups",
+              "apiVersion": "2020-05-01",
+              "name": "[parameters('sharedGroupId')]",
+              "properties": {
+                "displayName": "[format('{0} - Internal - Shared Services', parameters('customerName'))]",
+                "parent": {
+                  "id": "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
+                }
+              },
+              "dependsOn": [
+                "[tenantResourceId('Microsoft.Management/managementGroups', parameters('topLevelGroupId'))]"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "connectivityCoreConnectivity",
+      "resourceGroup": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "addressPrefix": {
+            "value": "[variables('addressPrefixes').coreConnectivity]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreConnectivity')]"
+          },
+          "associateNSGs": {
+            "value": true
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "subnetConfig": {
+            "value": [
+              {
+                "name": "GatewaySubnet",
+                "addressPrefix": "10.101.0.0/27"
+              },
+              {
+                "name": "AzureFirewallSubnet",
+                "addressPrefix": "10.101.1.0/24"
+              },
+              {
+                "name": "CoreServices",
+                "addressPrefix": "10.101.2.0/24"
+              },
+              {
+                "name": "PrivateEndpoint",
+                "addressPrefix": "10.101.7.0/24"
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "9743029814888955655"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment"
+              }
+            },
+            "addressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet address prefix"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet name"
+              }
+            },
+            "associateNSGs": {
+              "type": "bool",
+              "metadata": {
+                "description": "Should NSGs be associated to subnets?"
+              }
+            },
+            "subnetConfig": {
+              "type": "array",
+              "metadata": {
+                "description": "Subnet configurations"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "defaultValue": "UK South",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
+            },
+            {
+              "copy": {
+                "name": "nsgs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
+              "location": "[parameters('region')]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "subnetIds": {
+              "type": "object",
+              "value": {
+                "GatewaySubnet": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), 'GatewaySubnet')]",
+                "AzureFirewallSubnet": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), 'AzureFirewallSubnet')]"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "coreGateway",
+      "resourceGroup": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "gatewaySubnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.subnetIds.value.GatewaySubnet]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "11629645321117032478"
+            }
+          },
+          "parameters": {
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "gatewaySubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "GatewaySubnet ID"
+              }
+            },
+            "publicIpName": {
+              "type": "string",
+              "defaultValue": "[format('pip-vnet-gw-{0}-core-{1}-{2}', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "metadata": {
+                "description": "Public IP name for VNet Gateway"
+              }
+            },
+            "gatewayName": {
+              "type": "string",
+              "defaultValue": "[format('vnet-gw-{0}-core-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "metadata": {
+                "description": "Virtual Network Gateway name"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-02-01",
+              "name": "[format('{0}-01', parameters('publicIpName'))]",
+              "location": "[parameters('region')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            },
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-02-01",
+              "name": "[format('{0}-02', parameters('publicIpName'))]",
+              "location": "[parameters('region')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAllocationMethod": "Static"
+              },
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworkGateways",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('gatewayName')]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "enableBgp": false,
+                "activeActive": true,
+                "gatewayType": "Vpn",
+                "vpnType": "RouteBased",
+                "sku": {
+                  "name": "VpnGw2AZ",
+                  "tier": "VpnGw2AZ"
+                },
+                "ipConfigurations": [
+                  {
+                    "name": "gw-ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('gatewaySubnetId')]"
+                      },
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-01', parameters('publicIpName')))]"
+                      }
+                    }
+                  },
+                  {
+                    "name": "gw-ipconfig2",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('gatewaySubnetId')]"
+                      },
+                      "publicIPAddress": {
+                        "id": "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-02', parameters('publicIpName')))]"
+                      }
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-01', parameters('publicIpName')))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-02', parameters('publicIpName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "virtualNetworkGatewayId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworkGateways', parameters('gatewayName'))]"
+            },
+            "virtualNetworkGatewayPublicIpIds": {
+              "type": "array",
+              "value": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-01', parameters('publicIpName')))]",
+                "[resourceId('Microsoft.Network/publicIPAddresses', format('{0}-02', parameters('publicIpName')))]"
+              ]
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "coreFirewall",
+      "resourceGroup": "[format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "firewallSubnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.subnetIds.value.AzureFirewallSubnet]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "9831779124159290335"
+            }
+          },
+          "parameters": {
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "firewallName": {
+              "type": "string",
+              "defaultValue": "[format('azfw-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "metadata": {
+                "description": "Firewall name"
+              }
+            },
+            "firewallSubnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "AzureFirewallSubnet ID"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/azureFirewalls",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('firewallName')]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "sku": {
+                  "name": "AZFW_VNet",
+                  "tier": "Standard"
+                },
+                "ipConfigurations": [
+                  {
+                    "name": "azfw-config",
+                    "properties": {
+                      "subnet": {
+                        "id": "[parameters('firewallSubnetId')]"
+                      },
+                      "publicIPAddress": null
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "outputs": {
+            "firewallPrivateIpAddress": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/azureFirewalls', parameters('firewallName')), '2023-02-01').ipConfigurations[0].properties.privateIPAddress]"
+            },
+            "firewallId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/azureFirewalls', parameters('firewallName'))]"
+            },
+            "firewallPrivateIp": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/azureFirewalls', parameters('firewallName')), '2023-02-01').ipConfigurations[0].properties.privateIPAddress]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "connectivityCoreIdentity",
+      "resourceGroup": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "addressPrefix": {
+            "value": "[variables('addressPrefixes').coreIdentity]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreIdentity')]"
+          },
+          "associateNSGs": {
+            "value": true
+          },
+          "attachRouteTable": {
+            "value": true
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "onPremAddressPrefix": {
+            "value": "[parameters('onPremAddressPrefix')]"
+          },
+          "firewallPrivateIpAddress": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+          },
+          "subnetConfig": {
+            "value": [
+              {
+                "name": "DomainControllers",
+                "addressPrefix": "10.101.8.0/24"
+              },
+              {
+                "name": "EntraDomainServices",
+                "addressPrefix": "10.101.9.0/24"
+              },
+              {
+                "name": "PrivateEndpoint",
+                "addressPrefix": "10.101.11.0/24"
+              }
+            ]
+          },
+          "routeTables": {
+            "value": [
+              {
+                "name": "[format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+                "subnets": [
+                  "DomainControllers",
+                  "EntraDomainServices",
+                  "PrivateEndpoint"
+                ],
+                "routes": [
+                  {
+                    "name": "[variables('vnetNameSharedServices')]",
+                    "addressPrefix": "10.101.16.0/21",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "[variables('vnetNameCoreManagement')]",
+                    "addressPrefix": "10.101.248.0/21",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-OnPrem",
+                    "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-WAN",
+                    "addressPrefix": "0.0.0.0/0",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  }
+                ]
+              }
+            ]
+          },
+          "hubVnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "3332959264621061528"
+            }
+          },
+          "parameters": {
+            "routeTables": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Route tables to assign to subnets"
+              }
+            },
+            "hubVnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Hub VNet ID for peering"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name"
+              }
+            },
+            "addressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet address space"
+              }
+            },
+            "associateNSGs": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to associate NSGs"
+              }
+            },
+            "attachRouteTable": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to attach route tables"
+              }
+            },
+            "onPremAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "On-premises address prefix"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "subnetConfig": {
+              "type": "array",
+              "metadata": {
+                "description": "Subnet configurations"
+              }
+            },
+            "firewallPrivateIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Private IP address of the Azure Firewall"
+              }
+            }
+          },
+          "variables": {
+            "location": "[parameters('region')]"
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "subnetNSGs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "condition": "[and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex()].name, 'EntraDomainServices')))]",
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(and(parameters('associateNSGs'), not(equals(parameters('subnetConfig')[copyIndex('subnets')].name, 'EntraDomainServices'))), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-{1}-core-identity-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[parameters('attachRouteTable')]",
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-02-01",
+              "name": "[format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                  {
+                    "name": "Route-To-OnPrem",
+                    "properties": {
+                      "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-core-management-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.248.0/21",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-sharedservices-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.16.0/21",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "To-WAN",
+                    "properties": {
+                      "addressPrefix": "0.0.0.0/0",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "nsgs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
+              "location": "[parameters('region')]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "routeTableIds": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-identity-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "connectivityCoreManagement",
+      "resourceGroup": "[format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "addressPrefix": {
+            "value": "[variables('addressPrefixes').coreManagement]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreManagement')]"
+          },
+          "associateNSGs": {
+            "value": true
+          },
+          "attachRouteTable": {
+            "value": true
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "firewallPrivateIpAddress": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+          },
+          "onPremAddressPrefix": {
+            "value": "[parameters('onPremAddressPrefix')]"
+          },
+          "subnetConfig": {
+            "value": [
+              {
+                "name": "ManagementServers",
+                "addressPrefix": "10.101.248.0/24"
+              },
+              {
+                "name": "AzureBastionSubnet",
+                "addressPrefix": "10.101.249.0/27"
+              },
+              {
+                "name": "PrivateEndpoint",
+                "addressPrefix": "10.101.255.0/24"
+              }
+            ]
+          },
+          "routeTables": {
+            "value": [
+              {
+                "name": "[format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+                "subnets": [
+                  "ManagementServers",
+                  "AzureBastionSubnet",
+                  "PrivateEndpoint"
+                ],
+                "routes": [
+                  {
+                    "name": "[variables('vnetNameCoreIdentity')]",
+                    "addressPrefix": "10.101.8.0/22",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "[variables('vnetNameSharedServices')]",
+                    "addressPrefix": "10.101.16.0/21",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-OnPrem",
+                    "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-WAN",
+                    "addressPrefix": "0.0.0.0/0",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  }
+                ]
+              }
+            ]
+          },
+          "hubVnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "14537798407021337752"
+            }
+          },
+          "parameters": {
+            "routeTables": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Route tables to assign to subnets"
+              }
+            },
+            "hubVnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Hub VNet ID for peering"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name"
+              }
+            },
+            "addressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet address space"
+              }
+            },
+            "associateNSGs": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to associate NSGs"
+              }
+            },
+            "attachRouteTable": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to attach route tables"
+              }
+            },
+            "onPremAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "On-premises address prefix"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "subnetConfig": {
+              "type": "array",
+              "metadata": {
+                "description": "Subnet configurations"
+              }
+            },
+            "firewallPrivateIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Private IP address of the Azure Firewall"
+              }
+            }
+          },
+          "variables": {
+            "location": "[parameters('region')]"
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "subnetNSGs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "condition": "[parameters('associateNSGs')]",
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-vnet-{1}-core-management-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-core-management-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[parameters('attachRouteTable')]",
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-02-01",
+              "name": "[format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                  {
+                    "name": "Route-To-OnPrem",
+                    "properties": {
+                      "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-core-identity-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.4.0/22",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-sharedservices-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.16.0/21",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "To-WAN",
+                    "properties": {
+                      "addressPrefix": "0.0.0.0/0",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "nsgs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
+              "location": "[parameters('region')]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "routeTableIds": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/routeTables', format('rt-{0}-core-management-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sharedSconnectivitySharedServiceservices",
+      "resourceGroup": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "addressPrefix": {
+            "value": "[variables('addressPrefixes').sharedServices]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameSharedServices')]"
+          },
+          "associateNSGs": {
+            "value": true
+          },
+          "attachRouteTable": {
+            "value": true
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "onPremAddressPrefix": {
+            "value": "[parameters('onPremAddressPrefix')]"
+          },
+          "firewallPrivateIpAddress": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+          },
+          "subnetConfig": {
+            "value": [
+              {
+                "name": "SharedServices",
+                "addressPrefix": "10.101.16.0/24"
+              },
+              {
+                "name": "PrivateEndpoint",
+                "addressPrefix": "10.101.23.0/24"
+              }
+            ]
+          },
+          "routeTables": {
+            "value": [
+              {
+                "name": "[format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+                "subnets": [
+                  "SharedServices",
+                  "PrivateEndpoint"
+                ],
+                "routes": [
+                  {
+                    "name": "[variables('vnetNameCoreIdentity')]",
+                    "addressPrefix": "10.101.8.0/22",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "[variables('vnetNameCoreManagement')]",
+                    "addressPrefix": "10.101.248.0/21",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-OnPrem",
+                    "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  },
+                  {
+                    "name": "To-WAN",
+                    "addressPrefix": "0.0.0.0/0",
+                    "nextHopType": "VirtualAppliance",
+                    "nextHopIpAddress": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+                  }
+                ]
+              }
+            ]
+          },
+          "hubVnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "1720986623357238357"
+            }
+          },
+          "parameters": {
+            "routeTables": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "Route tables to assign to subnets"
+              }
+            },
+            "hubVnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Hub VNet ID for peering"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation"
+              }
+            },
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name"
+              }
+            },
+            "addressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "VNet address space"
+              }
+            },
+            "associateNSGs": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to associate NSGs"
+              }
+            },
+            "attachRouteTable": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether to attach route tables"
+              }
+            },
+            "onPremAddressPrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "On-premises address prefix"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "subnetConfig": {
+              "type": "array",
+              "metadata": {
+                "description": "Subnet configurations"
+              }
+            },
+            "firewallPrivateIpAddress": {
+              "type": "string",
+              "metadata": {
+                "description": "Private IP address of the Azure Firewall"
+              }
+            }
+          },
+          "variables": {
+            "location": "[parameters('region')]"
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "subnetNSGs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "condition": "[parameters('associateNSGs')]",
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-vnet-{1}-sharedservices-{2}-{3}', parameters('subnetConfig')[copyIndex()].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "securityRules": []
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "copy": [
+                  {
+                    "name": "subnets",
+                    "count": "[length(parameters('subnetConfig'))]",
+                    "input": {
+                      "name": "[parameters('subnetConfig')[copyIndex('subnets')].name]",
+                      "properties": {
+                        "addressPrefix": "[parameters('subnetConfig')[copyIndex('subnets')].addressPrefix]",
+                        "routeTable": "[if(parameters('attachRouteTable'), createObject('id', resourceId('Microsoft.Network/routeTables', format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]",
+                        "networkSecurityGroup": "[if(parameters('associateNSGs'), createObject('id', resourceId('Microsoft.Network/networkSecurityGroups', format('nsg-{0}-vnet-{1}-sharedservices-{2}-{3}', parameters('subnetConfig')[copyIndex('subnets')].name, parameters('environment'), parameters('customerAbbreviation'), parameters('region')))), null())]"
+                      }
+                    }
+                  }
+                ],
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('addressPrefix')]"
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[parameters('attachRouteTable')]",
+              "type": "Microsoft.Network/routeTables",
+              "apiVersion": "2023-02-01",
+              "name": "[format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+              "location": "[variables('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "disableBgpRoutePropagation": false,
+                "routes": [
+                  {
+                    "name": "Route-To-OnPrem",
+                    "properties": {
+                      "addressPrefix": "[parameters('onPremAddressPrefix')]",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-core-management-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.248.0/21",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "[format('vnet-prod-core-identity-{0}-{1}-01', parameters('customerAbbreviation'), parameters('region'))]",
+                    "properties": {
+                      "addressPrefix": "10.101.4.0/22",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  },
+                  {
+                    "name": "To-WAN",
+                    "properties": {
+                      "addressPrefix": "0.0.0.0/0",
+                      "nextHopType": "VirtualAppliance",
+                      "nextHopIpAddress": "[parameters('firewallPrivateIpAddress')]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "nsgs",
+                "count": "[length(parameters('subnetConfig'))]"
+              },
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[format('nsg-{0}-{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
+              "location": "[parameters('region')]",
+              "properties": {}
+            }
+          ],
+          "outputs": {
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "routeTableIds": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/routeTables', format('rt-{0}-sharedservices-{1}-{2}-hub', parameters('environment'), parameters('customerAbbreviation'), parameters('region')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "managementVm",
+      "resourceGroup": "[format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreManagement')]"
+          },
+          "subnetName": {
+            "value": "ManagementServers"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "18428154926764038328"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation (e.g., ESP)"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment (e.g., prod, dev, uat)"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network name"
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "defaultValue": "ManagementServers",
+              "metadata": {
+                "description": "Subnet name for the management VM"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "VM admin username"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "VM admin password"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            },
+            "costCenter": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Management",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Administration",
+              "metadata": {
+                "description": "Function tag"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-02-01",
+              "name": "[format('{0}-{1}-mgmt-nic', parameters('customerAbbreviation'), parameters('environment'))]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenter')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[format('{0}-{1}-mgmt-vm', parameters('customerAbbreviation'), parameters('environment'))]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenter')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_D2s_v6"
+                },
+                "osProfile": {
+                  "computerName": "[format('{0}-{1}-mgmt-vm', parameters('customerAbbreviation'), parameters('environment'))]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "MicrosoftWindowsServer",
+                    "offer": "WindowsServer",
+                    "sku": "2025-datacenter",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage"
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}-mgmt-nic', parameters('customerAbbreviation'), parameters('environment')))]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-{1}-mgmt-nic', parameters('customerAbbreviation'), parameters('environment')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "managementServerId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-{1}-mgmt-vm', parameters('customerAbbreviation'), parameters('environment')))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "domainVms",
+      "resourceGroup": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "regionAbbreviation": {
+            "value": "[parameters('regionAbbreviation')]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreIdentity')]"
+          },
+          "subnetName": {
+            "value": "DomainControllers"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "3124603258945612056"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "regionAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Region abbreviation (e.g., UKS)"
+              }
+            },
+            "customerAbbreviation": {
+              "type": "string",
+              "metadata": {
+                "description": "Customer abbreviation (e.g., ESP)"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network name"
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "defaultValue": "DomainControllers",
+              "metadata": {
+                "description": "Subnet name for domain controllers"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "VM admin username"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "VM admin password"
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_D2s_v6",
+              "metadata": {
+                "description": "VM size"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value for tags"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Domain Controller",
+              "metadata": {
+                "description": "Application tag value"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Identity Services",
+              "metadata": {
+                "description": "Function tag value"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "CostCenter tag value"
+              }
+            }
+          },
+          "variables": {
+            "zones": [
+              "1",
+              "2"
+            ]
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "nic",
+                "count": "[length(range(0, 2))]"
+              },
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-02-01",
+              "name": "[format('{0}-AZ{1}-DC0{2}-nic', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[copyIndex()], 1))]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "vms",
+                "count": "[length(range(0, 2))]"
+              },
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[format('{0}-AZ{1}-DC0{2}', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[copyIndex()], 1))]",
+              "location": "[parameters('region')]",
+              "zones": [
+                "[variables('zones')[range(0, 2)[copyIndex()]]]"
+              ],
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "[parameters('vmSize')]"
+                },
+                "osProfile": {
+                  "computerName": "[format('{0}-AZ{1}-DC0{2}', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[copyIndex()], 1))]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "MicrosoftWindowsServer",
+                    "offer": "WindowsServer",
+                    "sku": "2025-Datacenter",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_LRS"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-DC0{2}-nic', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[range(0, 2)[copyIndex()]], 1)))]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-DC0{2}-nic', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[range(0, 2)[copyIndex()]], 1)))]",
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-DC0{2}-nic', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[range(0, 2)[copyIndex()]], 1)))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmIds": {
+              "type": "array",
+              "copy": {
+                "count": "[length(range(0, 2))]",
+                "input": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-DC0{2}', parameters('customerAbbreviation'), parameters('regionAbbreviation'), add(range(0, 2)[range(0, 2)[copyIndex()]], 1)))]"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "aadds",
+      "resourceGroup": "[format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "domainName": {
+            "value": "[format('{0}.local', parameters('customerAbbreviation'))]"
+          },
+          "vnetName": {
+            "value": "[variables('vnetNameCoreIdentity')]"
+          },
+          "subnetName": {
+            "value": "EntraDomainServices"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "6121982298017570780"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "domainName": {
+              "type": "string",
+              "metadata": {
+                "description": "Domain name for Entra Domain Services"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name for integration"
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "defaultValue": "EntraDomainServices",
+              "metadata": {
+                "description": "Subnet name to associate with AAD DS"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value for tags (e.g., UK South)"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Entra Domain Services",
+              "metadata": {
+                "description": "Application tag value"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Identity Services",
+              "metadata": {
+                "description": "Function tag value"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "CostCenter tag value"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.AAD/domainServices",
+              "apiVersion": "2021-05-01",
+              "name": "[parameters('domainName')]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "domainName": "[parameters('domainName')]",
+                "sku": "Standard",
+                "replicaSets": [
+                  {
+                    "location": "[parameters('region')]",
+                    "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                  }
+                ],
+                "ldapsSettings": {
+                  "ldaps": "Disabled",
+                  "pfxCertificate": "",
+                  "pfxCertificatePassword": ""
+                },
+                "notificationSettings": {
+                  "notifyGlobalAdmins": "true",
+                  "notifyDcAdmins": "true"
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "aaddsId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.AAD/domainServices', parameters('domainName'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "azureFiles",
+      "resourceGroup": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "region": {
+            "value": "[parameters('region')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "storageAccountName": {
+            "value": "[format('stfiles{0}{1}{2}01', parameters('environment'), parameters('customerAbbreviation'), parameters('regionAbbreviation'))]"
+          },
+          "fileShareName": {
+            "value": "sharedfiles"
+          },
+          "vnetId": {
+            "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.vnetId.value]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "7951559036897672800"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name (must be globally unique)"
+              }
+            },
+            "fileShareName": {
+              "type": "string",
+              "defaultValue": "sharedfiles",
+              "metadata": {
+                "description": "Share name for Azure Files"
+              }
+            },
+            "skuName": {
+              "type": "string",
+              "defaultValue": "Premium_ZRS",
+              "metadata": {
+                "description": "SKU for the storage account"
+              }
+            },
+            "vnetId": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network ID for the private endpoint"
+              }
+            },
+            "privateEndpointSubnetName": {
+              "type": "string",
+              "defaultValue": "PrivateEndpoint",
+              "metadata": {
+                "description": "Name of the subnet for the private endpoint"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-01-01",
+              "name": "[parameters('storageAccountName')]",
+              "location": "[parameters('region')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "sku": {
+                "name": "[parameters('skuName')]"
+              },
+              "kind": "FileStorage",
+              "properties": {
+                "supportsHttpsTrafficOnly": true,
+                "allowBlobPublicAccess": false,
+                "minimumTlsVersion": "TLS1_2"
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+              "apiVersion": "2023-01-01",
+              "name": "[format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareName'))]",
+              "properties": {
+                "shareQuota": 100,
+                "enabledProtocols": "SMB"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-02-01",
+              "name": "[format('{0}-pe', parameters('storageAccountName'))]",
+              "location": "[parameters('region')]",
+              "properties": {
+                "subnet": {
+                  "id": "[format('{0}/subnets/{1}', parameters('vnetId'), parameters('privateEndpointSubnetName'))]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "fileStorageConnection",
+                    "properties": {
+                      "privateLinkServiceId": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+                      "groupIds": [
+                        "file"
+                      ]
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "privatelink.file.core.windows.net",
+              "location": "global"
+            },
+            {
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', format('{0}-pe', parameters('storageAccountName')), 'default')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "file",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.file.core.windows.net')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', 'privatelink.file.core.windows.net')]",
+                "[resourceId('Microsoft.Network/privateEndpoints', format('{0}-pe', parameters('storageAccountName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "fileShareId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts/fileServices/shares', split(format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareName')), '/')[0], split(format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareName')), '/')[1], split(format('{0}/default/{1}', parameters('storageAccountName'), parameters('fileShareName')), '/')[2])]"
+            },
+            "azureFilesId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "fileServer",
+      "resourceGroup": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vnetName": {
+            "value": "[variables('vnetNameSharedServices')]"
+          },
+          "subnetName": {
+            "value": "SharedServices"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "fsnamePrefix": {
+            "value": "[format('{0}-AZ{1}-FS01', parameters('customerAbbreviation'), parameters('regionAbbreviation'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "1716097539506000814"
+            }
+          },
+          "parameters": {
+            "fsnamePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix for the VM"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Region for the deployment"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual network name"
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "defaultValue": "SharedServices",
+              "metadata": {
+                "description": "Subnet name for the VM"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Deployment environment"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Connectivity and Routing",
+              "metadata": {
+                "description": "Application tag"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Core Management",
+              "metadata": {
+                "description": "Function tag"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Core Services",
+              "metadata": {
+                "description": "Cost Center tag"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-04-01",
+              "name": "[format('nic-{0}', parameters('fsnamePrefix'))]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              },
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[parameters('fsnamePrefix')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_D2s_v6"
+                },
+                "osProfile": {
+                  "computerName": "[parameters('fsnamePrefix')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "MicrosoftWindowsServer",
+                    "offer": "WindowsServer",
+                    "sku": "2025-Datacenter",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_LRS"
+                    }
+                  },
+                  "dataDisks": [
+                    {
+                      "lun": 0,
+                      "createOption": "Empty",
+                      "diskSizeGB": 1024,
+                      "managedDisk": {
+                        "storageAccountType": "Premium_LRS"
+                      }
+                    }
+                  ]
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('fsnamePrefix')))]"
+                    }
+                  ]
+                }
+              },
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('fsnamePrefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "fileServerId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('fsnamePrefix'))]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "printServer",
+      "resourceGroup": "[format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "vnetName": {
+            "value": "[variables('vnetNameSharedServices')]"
+          },
+          "subnetName": {
+            "value": "SharedServices"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "tagLocation": {
+            "value": "[parameters('tagLocation')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "prtnamePrefix": {
+            "value": "[format('{0}-AZ{1}-PRT01', parameters('customerAbbreviation'), parameters('regionAbbreviation'))]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.36.1.42791",
+              "templateHash": "13752268034156367694"
+            }
+          },
+          "parameters": {
+            "prtnamePrefix": {
+              "type": "string",
+              "metadata": {
+                "description": "Name prefix for the Print Server VM"
+              }
+            },
+            "location": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region"
+              }
+            },
+            "vnetName": {
+              "type": "string",
+              "metadata": {
+                "description": "Virtual Network name"
+              }
+            },
+            "subnetName": {
+              "type": "string",
+              "defaultValue": "SharedServices",
+              "metadata": {
+                "description": "Subnet name for Print Server VM"
+              }
+            },
+            "adminUsername": {
+              "type": "string",
+              "metadata": {
+                "description": "Admin username for the VM"
+              }
+            },
+            "adminPassword": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Admin password for the VM"
+              }
+            },
+            "createdBy": {
+              "type": "string",
+              "metadata": {
+                "description": "CreatedBy tag value"
+              }
+            },
+            "managedBy": {
+              "type": "string",
+              "metadata": {
+                "description": "ManagedBy tag value"
+              }
+            },
+            "environment": {
+              "type": "string",
+              "metadata": {
+                "description": "Environment tag value"
+              }
+            },
+            "tagLocation": {
+              "type": "string",
+              "metadata": {
+                "description": "Location tag value"
+              }
+            },
+            "applicationTag": {
+              "type": "string",
+              "defaultValue": "Print Services",
+              "metadata": {
+                "description": "Application tag value"
+              }
+            },
+            "functionTag": {
+              "type": "string",
+              "defaultValue": "Print Server",
+              "metadata": {
+                "description": "Function tag value"
+              }
+            },
+            "costCenterTag": {
+              "type": "string",
+              "defaultValue": "Shared Services",
+              "metadata": {
+                "description": "CostCenter tag value"
+              }
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/networkInterfaces",
+              "apiVersion": "2023-04-01",
+              "name": "[format('nic-{0}', parameters('prtnamePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "ipConfigurations": [
+                  {
+                    "name": "ipconfig1",
+                    "properties": {
+                      "subnet": {
+                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
+                      },
+                      "privateIPAllocationMethod": "Dynamic"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines",
+              "apiVersion": "2023-03-01",
+              "name": "[parameters('prtnamePrefix')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "hardwareProfile": {
+                  "vmSize": "Standard_D2s_v6"
+                },
+                "osProfile": {
+                  "computerName": "[parameters('prtnamePrefix')]",
+                  "adminUsername": "[parameters('adminUsername')]",
+                  "adminPassword": "[parameters('adminPassword')]"
+                },
+                "storageProfile": {
+                  "imageReference": {
+                    "publisher": "MicrosoftWindowsServer",
+                    "offer": "WindowsServer",
+                    "sku": "2025-Datacenter",
+                    "version": "latest"
+                  },
+                  "osDisk": {
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_LRS"
+                    }
+                  }
+                },
+                "networkProfile": {
+                  "networkInterfaces": [
+                    {
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('prtnamePrefix')))]"
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('prtnamePrefix')))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Compute/virtualMachines/extensions",
+              "apiVersion": "2023-03-01",
+              "name": "[format('{0}/{1}', parameters('prtnamePrefix'), 'InstallPrintRoles')]",
+              "location": "[parameters('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
+              "properties": {
+                "publisher": "Microsoft.Compute",
+                "type": "CustomScriptExtension",
+                "typeHandlerVersion": "1.10",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                  "commandToExecute": "powershell.exe -ExecutionPolicy Unrestricted -Command \"Install-WindowsFeature -Name Print-Server,Print-Services -IncludeManagementTools\""
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachines', parameters('prtnamePrefix'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vmId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('prtnamePrefix'))]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "coreVNetId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreConnectivity'), '2022-09-01').outputs.vnetId.value]"
+    },
+    "identityVNetId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity'), '2022-09-01').outputs.vnetId.value]"
+    },
+    "managementVNetId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreManagement'), '2022-09-01').outputs.vnetId.value]"
+    },
+    "sharedServicesVNetId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.vnetId.value]"
+    },
+    "managementVmId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'managementVm'), '2022-09-01').outputs.managementServerId.value]"
+    },
+    "domainVmsIds": {
+      "type": "array",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'domainVms'), '2022-09-01').outputs.vmIds.value]"
+    },
+    "aaddsId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'aadds'), '2022-09-01').outputs.aaddsId.value]"
+    },
+    "azureFilesId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'azureFiles'), '2022-09-01').outputs.azureFilesId.value]"
+    },
+    "fileServerId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'fileServer'), '2022-09-01').outputs.fileServerId.value]"
+    },
+    "firewallId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallId.value]"
+    },
+    "firewallPrivateIpAddress": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreFirewall'), '2022-09-01').outputs.firewallPrivateIpAddress.value]"
+    },
+    "virtualNetworkGatewayId": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreGateway'), '2022-09-01').outputs.virtualNetworkGatewayId.value]"
+    },
+    "virtualNetworkGatewayPublicIpId": {
+      "type": "array",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-connectivity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'coreGateway'), '2022-09-01').outputs.virtualNetworkGatewayPublicIpIds.value]"
+    },
+    "routeTableIds": {
+      "type": "object",
+      "value": {
+        "identity": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-identity-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreIdentity'), '2022-09-01').outputs.routeTableIds.value]",
+        "management": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-core-management-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'connectivityCoreManagement'), '2022-09-01').outputs.routeTableIds.value]",
+        "shared": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, format('rg-{0}-sharedservices-{1}-{2}-01', parameters('environment'), parameters('customerAbbreviation'), parameters('region'))), 'Microsoft.Resources/deployments', 'sharedSconnectivitySharedServiceservices'), '2022-09-01').outputs.routeTableIds.value]"
+      }
+    }
+  }
 }

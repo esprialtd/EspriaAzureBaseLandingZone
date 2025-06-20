@@ -1,4 +1,9 @@
 // modules/shared/connectivitySharedServices.bicep
+@description('Route tables to assign to subnets')
+param routeTables array = []
+
+@description('Hub VNet ID for peering')
+param hubVnetId string
 
 @description('Customer abbreviation')
 param customerAbbreviation string
@@ -33,11 +38,18 @@ param managedBy string
 @description('Location tag')
 param tagLocation string
 
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
+
+@description('Function tag') 
+param functionTag string = 'Core Management'
+
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
+
 @description('Subnet configurations')
 param subnetConfig array
 
-@description('Hub VNet ID for peering')
-param hubVnetId string
 
 @description('Private IP address of the Azure Firewall')
 param firewallPrivateIpAddress string
@@ -48,13 +60,13 @@ resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for 
   name: 'nsg-${subnet.name}-vnet-${environment}-sharedservices-${customerAbbreviation}-${region}'
   location: location
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Shared Services'
-    Function: 'NSG'
-    CostCenter: 'Shared Services'
+    Location: tagLocation
   }
   properties: {
     securityRules: []
@@ -65,13 +77,13 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: location
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Shared Services'
-    Function: 'Shared Infrastructure'
-    CostCenter: 'Shared Services'
+    Location: tagLocation
   }
   properties: {
     addressSpace: {
@@ -96,13 +108,13 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   name: 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub'
   location: location
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Shared Services'
-    Function: 'Routing'
-    CostCenter: 'Shared Services'
+    Location: tagLocation
   }
   properties: {
     disableBgpRoutePropagation: false
@@ -143,4 +155,13 @@ resource routeTable 'Microsoft.Network/routeTables@2023-02-01' = if (attachRoute
   }
 }
 
+// NSG creation
+resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
+  name: 'nsg-${vnetName}-${subnet.name}'
+  location: region
+  properties: {}
+}
+]
+
 output vnetId string = vnet.id
+output routeTableIds string = routeTable.id

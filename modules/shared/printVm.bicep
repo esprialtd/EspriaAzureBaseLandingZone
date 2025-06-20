@@ -1,7 +1,7 @@
 // modules/sharedservices/printVm.bicep
 
 @description('Name prefix for the Print Server VM')
-param namePrefix string
+param prtnamePrefix string
 
 @description('Azure region')
 param location string
@@ -40,14 +40,8 @@ param functionTag string = 'Print Server'
 @description('CostCenter tag value')
 param costCenterTag string = 'Shared Services'
 
-@description('customer abbreviation')
-param customerAbbreviation string
-
-@description('region')
-param region string
-
 resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
-  name: '${namePrefix}-nic'
+  name: 'nic-${prtnamePrefix}'
   location: location
   tags: {
     Application: applicationTag
@@ -74,7 +68,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
 }
 
 resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
-  name: '${namePrefix}-vm'
+  name: prtnamePrefix
   location: location
   tags: {
     Application: applicationTag
@@ -90,7 +84,7 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
       vmSize: 'Standard_D2s_v6'
     }
     osProfile: {
-      computerName: '${namePrefix}-vm'
+      computerName: prtnamePrefix
       adminUsername: adminUsername
       adminPassword: adminPassword
     }
@@ -119,7 +113,8 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
 }
 
 resource printRoleExtension 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
-  name: '${vm.name}/InstallPrintRoles'
+  name: 'InstallPrintRoles'
+  parent: vm
   location: location
   tags: {
     Application: applicationTag
@@ -139,9 +134,6 @@ resource printRoleExtension 'Microsoft.Compute/virtualMachines/extensions@2023-0
       commandToExecute: 'powershell.exe -ExecutionPolicy Unrestricted -Command "Install-WindowsFeature -Name Print-Server,Print-Services -IncludeManagementTools"'
     }
   }
-  dependsOn: [
-    vm
-  ]
 }
 
 output vmId string = vm.id

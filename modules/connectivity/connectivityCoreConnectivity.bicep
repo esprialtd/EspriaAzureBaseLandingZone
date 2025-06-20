@@ -1,8 +1,5 @@
 // modules/connectivity/connectivityCoreConnectivity.bicep
 
-@description('Customer abbreviation')
-param customerAbbreviation string
-
 @description('Azure region')
 param region string
 
@@ -16,13 +13,10 @@ param addressPrefix string
 param vnetName string
 
 @description('Should NSGs be associated to subnets?')
-param associateNSGs string
+param associateNSGs bool
 
 @description('Subnet configurations')
 param subnetConfig array
-
-@description('Attach Route Tables to Subnets?')
-param attachRouteTable string
 
 @description('CreatedBy tag value')
 param createdBy string
@@ -33,9 +27,27 @@ param managedBy string
 @description('Location tag value')
 param tagLocation string = 'UK South'
 
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
+
+@description('Function tag') 
+param functionTag string = 'Core Management'
+
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
+
 resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   name: vnetName
   location: region
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
   properties: {
     addressSpace: {
       addressPrefixes: [addressPrefix]
@@ -50,11 +62,17 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   }
 }
 
-// Optional NSG creation if requested
-resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
+// NSG creation
+resource nsgs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: {
   name: 'nsg-${vnetName}-${subnet.name}'
   location: region
   properties: {}
-}]
+}
+]
+
 
 output vnetId string = vnet.id
+output subnetIds object = {
+  GatewaySubnet: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'GatewaySubnet')
+  AzureFirewallSubnet: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'AzureFirewallSubnet')
+}

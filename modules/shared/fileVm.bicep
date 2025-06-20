@@ -1,7 +1,5 @@
-// modules/sharedservices/fileVm.bicep
-
 @description('Name prefix for the VM')
-param namePrefix string
+param fsnamePrefix string
 
 @description('Region for the deployment')
 param location string
@@ -15,12 +13,12 @@ param subnetName string = 'SharedServices'
 @description('Admin username')
 param adminUsername string
 
+@description('Deployment environment')
+param environment string
+
 @secure()
 @description('Admin password')
 param adminPassword string
-
-@description('Resource group for storage')
-param storageRgName string
 
 @description('CreatedBy tag value')
 param createdBy string
@@ -31,15 +29,17 @@ param managedBy string
 @description('Location tag value')
 param tagLocation string
 
-@description('customer abbreviation')
-param customerAbbreviation string
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
 
-@description('region')
-param region string
+@description('Function tag') 
+param functionTag string = 'Core Management'
 
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
 
 resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
-  name: '${namePrefix}-nic'
+  name: 'nic-${fsnamePrefix}'
   location: location
   properties: {
     ipConfigurations: [
@@ -54,17 +54,26 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
       }
     ]
   }
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
 }
 
 resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
-  name: '${namePrefix}-vm'
+  name: fsnamePrefix
   location: location
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_D2s_v6' // Adjust VM size as needed
+      vmSize: 'Standard_D2s_v6'
     }
     osProfile: {
-      computerName: '${namePrefix}-vm'
+      computerName: fsnamePrefix
       adminUsername: adminUsername
       adminPassword: adminPassword
     }
@@ -100,6 +109,15 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
       ]
     }
   }
+  tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
+    CreatedBy: createdBy
+    ManagedBy: managedBy
+    Environment: environment
+    Location: tagLocation
+  }
 }
 
-output vmId string = vm.id
+output fileServerId string = vm.id

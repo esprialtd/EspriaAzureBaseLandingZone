@@ -18,8 +18,14 @@ param managedBy string
 @description('Location tag')
 param tagLocation string
 
-@description('Virtual Network name')
-param vnetName string
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
+
+@description('Function tag') 
+param functionTag string = 'Core Management'
+
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
 
 @description('GatewaySubnet ID')
 param gatewaySubnetId string
@@ -40,13 +46,13 @@ resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
     publicIPAllocationMethod: 'Static'
   }
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Connectivity and Routing'
-    Function: 'Gateway'
-    CostCenter: 'Core Services'
+    Location: tagLocation
   }
 }
 
@@ -60,13 +66,13 @@ resource publicIp2 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
     publicIPAllocationMethod: 'Static'
   }
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Connectivity and Routing'
-    Function: 'Gateway'
-    CostCenter: 'Core Services'
+    Location: tagLocation
   }
 }
 
@@ -75,13 +81,13 @@ resource virtualNetworkGateway 'Microsoft.Network/virtualNetworkGateways@2023-02
   location: region
   dependsOn: [publicIp1, publicIp2]
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Connectivity and Routing'
-    Function: 'Gateway'
-    CostCenter: 'Core Services'
+    Location: tagLocation
   }
   properties: {
     enableBgp: false

@@ -18,6 +18,15 @@ param managedBy string
 @description('Location tag')
 param tagLocation string
 
+@description('Application tag')
+param applicationTag string = 'Connectivity and Routing'
+
+@description('Function tag') 
+param functionTag string = 'Core Management'
+
+@description('Cost Center tag')
+param costCenterTag string = 'Core Services'
+
 @description('Firewall name')
 param firewallName string = 'azfw-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
 
@@ -28,13 +37,13 @@ resource firewall 'Microsoft.Network/azureFirewalls@2023-02-01' = {
   name: firewallName
   location: region
   tags: {
+    Application: applicationTag
+    Function: functionTag
+    CostCenter: costCenterTag
     CreatedBy: createdBy
     ManagedBy: managedBy
-    Location: tagLocation
     Environment: environment
-    Application: 'Connectivity and Routing'
-    Function: 'Firewall'
-    CostCenter: 'Core Services'
+    Location: tagLocation
   }
   properties: {
     sku: {
