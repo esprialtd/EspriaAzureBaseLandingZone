@@ -36,9 +36,13 @@ param publicIpName string = 'pip-vnet-gw-${environment}-core-${customerAbbreviat
 @description('Virtual Network Gateway name')
 param gatewayName string = 'vnet-gw-${environment}-core-${customerAbbreviation}-${region}-01'
 
+@description('Availability zones for Public IPs; specify at least one zone')
+var availabilityZones array = [ '1', '2', '3' ]
+
 resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   name: '${publicIpName}-01'
   location: region
+  zones: [availabilityZones[1]]
   sku: {
     name: 'Standard'
   }
@@ -56,9 +60,11 @@ resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   }
 }
 
+
 resource publicIp2 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   name: '${publicIpName}-02'
   location: region
+  zones: [availabilityZones[2]]
   sku: {
     name: 'Standard'
   }
