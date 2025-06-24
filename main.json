@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "14573619660996227415"
+      "templateHash": "14379909978816503758"
     }
   },
   "parameters": {
@@ -728,7 +728,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "14985917807763358797"
+              "templateHash": "14745267381114192309"
             }
           },
           "parameters": {
@@ -823,9 +823,6 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}-01', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
-              "zones": [
-                "[variables('availabilityZones')[1]]"
-              ],
               "sku": {
                 "name": "Standard"
               },
@@ -847,9 +844,6 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}-02', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
-              "zones": [
-                "[variables('availabilityZones')[2]]"
-              ],
               "sku": {
                 "name": "Standard"
               },
