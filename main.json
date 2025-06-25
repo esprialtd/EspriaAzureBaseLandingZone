@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "14379909978816503758"
+      "templateHash": "11797158522973147366"
     }
   },
   "parameters": {
@@ -14,6 +14,20 @@
       "type": "string",
       "metadata": {
         "description": "Customer abbreviation (e.g., ESP)"
+      }
+    },
+    "customerName": {
+      "type": "string",
+      "defaultValue": "Espria Ltd",
+      "metadata": {
+        "description": "Customer name (e.g., Espria Ltd)"
+      }
+    },
+    "customerdomainname": {
+      "type": "string",
+      "defaultValue": "espria.co.uk",
+      "metadata": {
+        "description": "Customer domain name (e.g., espria.co.uk)"
       }
     },
     "region": {
@@ -38,7 +52,7 @@
     },
     "regionAbbreviation": {
       "type": "string",
-      "defaultValue": "[toUpper(take(parameters('region'), 2))]",
+      "defaultValue": "[toUpper(take(parameters('region'), 3))]",
       "metadata": {
         "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
       }
@@ -728,7 +742,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "14745267381114192309"
+              "templateHash": "13429852202335463796"
             }
           },
           "parameters": {
@@ -823,6 +837,9 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}-01', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
+              "zones": [
+                "1"
+              ],
               "sku": {
                 "name": "Standard"
               },
@@ -844,6 +861,9 @@
               "apiVersion": "2023-02-01",
               "name": "[format('{0}-02', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
+              "zones": [
+                "2"
+              ],
               "sku": {
                 "name": "Standard"
               },
@@ -1601,6 +1621,11 @@
           "onPremAddressPrefix": {
             "value": "[parameters('onPremAddressPrefix')]"
           },
+          "excludeFromNsg": {
+            "value": [
+              "AzureBastionSubnet"
+            ]
+          },
           "subnetConfig": {
             "value": [
               {
@@ -1666,7 +1691,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "3389122772631652870"
+              "templateHash": "18340030099204961743"
             }
           },
           "parameters": {
@@ -1782,6 +1807,13 @@
               "metadata": {
                 "description": "Private IP address of the Azure Firewall"
               }
+            },
+            "excludeFromNsg": {
+              "type": "array",
+              "defaultValue": [],
+              "metadata": {
+                "description": "List of subnet names NOT to associate NSGs to"
+              }
             }
           },
           "variables": {
@@ -1885,10 +1917,10 @@
             },
             {
               "copy": {
-                "name": "subnetNSGs",
+                "name": "nsgCollection",
                 "count": "[length(parameters('subnetConfig'))]"
               },
-              "condition": "[parameters('associateNSGs')]",
+              "condition": "[and(parameters('associateNSGs'), not(contains(parameters('excludeFromNsg'), parameters('subnetConfig')[copyIndex()].name)))]",
               "type": "Microsoft.Network/networkSecurityGroups",
               "apiVersion": "2023-02-01",
               "name": "[format('nsg-{0}-{1}', parameters('subnetConfig')[copyIndex()].name, parameters('vnetName'))]",
@@ -1920,7 +1952,7 @@
                 }
               },
               "dependsOn": [
-                "subnetNSGs",
+                "nsgCollection",
                 "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
               ]
             }
@@ -2600,7 +2632,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "3124603258945612056"
+              "templateHash": "13352441952624622872"
             }
           },
           "parameters": {
@@ -2773,14 +2805,15 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter",
+                    "sku": "2022-Datacenter-Gen2",
                     "version": "latest"
                   },
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
                       "storageAccountType": "Premium_LRS"
-                    }
+                    },
+                    "hyperVGeneration": "V2"
                   }
                 },
                 "networkProfile": {
@@ -2828,7 +2861,7 @@
             "value": "[parameters('region')]"
           },
           "domainName": {
-            "value": "[format('{0}.local', parameters('customerAbbreviation'))]"
+            "value": "[format('{0}', parameters('customerdomainname'))]"
           },
           "vnetName": {
             "value": "[variables('vnetNameCoreIdentity')]"
@@ -3267,7 +3300,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1716097539506000814"
+              "templateHash": "18375282575180494922"
             }
           },
           "parameters": {
@@ -3275,6 +3308,13 @@
               "type": "string",
               "metadata": {
                 "description": "Name prefix for the VM"
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_D2s_v6",
+              "metadata": {
+                "description": "VM size (must support Gen2 images)"
               }
             },
             "location": {
@@ -3388,9 +3428,18 @@
               "apiVersion": "2023-03-01",
               "name": "[parameters('fsnamePrefix')]",
               "location": "[parameters('location')]",
+              "tags": {
+                "Application": "[parameters('applicationTag')]",
+                "Function": "[parameters('functionTag')]",
+                "CostCenter": "[parameters('costCenterTag')]",
+                "CreatedBy": "[parameters('createdBy')]",
+                "ManagedBy": "[parameters('managedBy')]",
+                "Environment": "[parameters('environment')]",
+                "Location": "[parameters('tagLocation')]"
+              },
               "properties": {
                 "hardwareProfile": {
-                  "vmSize": "Standard_D2s_v6"
+                  "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
                   "computerName": "[parameters('fsnamePrefix')]",
@@ -3401,25 +3450,16 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter",
+                    "sku": "2025-Datacenter-Gen2",
                     "version": "latest"
                   },
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
                       "storageAccountType": "Premium_LRS"
-                    }
-                  },
-                  "dataDisks": [
-                    {
-                      "lun": 0,
-                      "createOption": "Empty",
-                      "diskSizeGB": 1024,
-                      "managedDisk": {
-                        "storageAccountType": "Premium_LRS"
-                      }
-                    }
-                  ]
+                    },
+                    "hyperVGeneration": "V2"
+                  }
                 },
                 "networkProfile": {
                   "networkInterfaces": [
@@ -3428,15 +3468,6 @@
                     }
                   ]
                 }
-              },
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('fsnamePrefix')))]"
@@ -3505,7 +3536,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "13752268034156367694"
+              "templateHash": "1608539285681878480"
             }
           },
           "parameters": {
@@ -3513,6 +3544,13 @@
               "type": "string",
               "metadata": {
                 "description": "Name prefix for the Print Server VM"
+              }
+            },
+            "vmSize": {
+              "type": "string",
+              "defaultValue": "Standard_D2s_v6",
+              "metadata": {
+                "description": "VM size (must support Gen2 images)"
               }
             },
             "location": {
@@ -3637,7 +3675,7 @@
               },
               "properties": {
                 "hardwareProfile": {
-                  "vmSize": "Standard_D2s_v6"
+                  "vmSize": "[parameters('vmSize')]"
                 },
                 "osProfile": {
                   "computerName": "[parameters('prtnamePrefix')]",
@@ -3648,14 +3686,15 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter",
+                    "sku": "2025-Datacenter-Gen2",
                     "version": "latest"
                   },
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
                       "storageAccountType": "Premium_LRS"
-                    }
+                    },
+                    "hyperVGeneration": "V2"
                   }
                 },
                 "networkProfile": {

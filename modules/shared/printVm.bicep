@@ -3,6 +3,9 @@
 @description('Name prefix for the Print Server VM')
 param prtnamePrefix string
 
+@description('VM size (must support Gen2 images)')
+param vmSize string = 'Standard_D2s_v6'
+
 @description('Azure region')
 param location string
 
@@ -72,45 +75,43 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   location: location
   tags: {
     Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
     Environment: environment
-    Location: tagLocation
+    Location:    tagLocation
   }
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_D2s_v6'
+      vmSize: vmSize
     }
     osProfile: {
-      computerName: prtnamePrefix
+      computerName:  prtnamePrefix
       adminUsername: adminUsername
       adminPassword: adminPassword
     }
     storageProfile: {
       imageReference: {
         publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: '2025-Datacenter'
-        version: 'latest'
+        offer:     'WindowsServer'
+        sku:       '2025-Datacenter-Gen2'
+        version:   'latest'
       }
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
           storageAccountType: 'Premium_LRS'
         }
+        hyperVGeneration: 'V2'
       }
     }
     networkProfile: {
-      networkInterfaces: [
-        {
-          id: nic.id
-        }
-      ]
+      networkInterfaces: [ { id: nic.id } ]
     }
   }
 }
+
 
 resource printRoleExtension 'Microsoft.Compute/virtualMachines/extensions@2023-03-01' = {
   name: 'InstallPrintRoles'

@@ -42,6 +42,9 @@ var availabilityZones array = [ '1', '2', '3' ]
 resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   name: '${publicIpName}-01'
   location: region
+  zones: [
+    '1'
+  ]
   sku: {
     name: 'Standard'
   }
@@ -63,6 +66,9 @@ resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
 resource publicIp2 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   name: '${publicIpName}-02'
   location: region
+  zones: [
+    '2'
+  ]
   sku: {
     name: 'Standard'
   }

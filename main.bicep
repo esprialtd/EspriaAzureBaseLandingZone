@@ -2,8 +2,15 @@
 // ------------------------------------
 // main.bicep - Root orchestration for cross-subscription base landing zone
 
+
 @description('Customer abbreviation (e.g., ESP)')
 param customerAbbreviation string
+
+@description('Customer name (e.g., Espria Ltd)')
+param customerName string = 'Espria Ltd'
+
+@description('Customer domain name (e.g., espria.co.uk)')
+  param customerdomainname string = 'espria.co.uk'
 
 @description('Azure region (e.g., uksouth, ukwest)')
 @allowed([
@@ -18,7 +25,7 @@ param region string = 'uksouth'
 param location string = region
 
 @description('Region short name (e.g., UKS,UKW,NEU,WEU)')
-param regionAbbreviation string = toUpper(take(region, 2))
+param regionAbbreviation string = toUpper(take(region, 3))
 
 @description('Environment (e.g., prod, dev, uat)')
 @allowed([
@@ -283,6 +290,9 @@ module connectivityCoreManagement 'modules/management/connectivityCoreManagement
     tagLocation: tagLocation
     firewallPrivateIpAddress: firewallPrivateIp
     onPremAddressPrefix: onPremAddressPrefix
+    excludeFromNsg : [
+      'AzureBastionSubnet'
+    ]
     subnetConfig: [
       {
         name: 'ManagementServers'
@@ -450,7 +460,7 @@ module aadds 'modules/identity/aadds.bicep' = {
   dependsOn: [connectivityCoreIdentity]
   params: {
     region: region
-    domainName: '${customerAbbreviation}.local'
+    domainName: '${customerdomainname}'
     vnetName: vnetNameCoreIdentity
     subnetName: 'EntraDomainServices'
     environment: environment

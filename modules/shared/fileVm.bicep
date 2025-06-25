@@ -1,6 +1,9 @@
 @description('Name prefix for the VM')
 param fsnamePrefix string
 
+@description('VM size (must support Gen2 images)')
+param vmSize string = 'Standard_D2s_v6'
+
 @description('Region for the deployment')
 param location string
 
@@ -68,55 +71,42 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-04-01' = {
 resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
   name: fsnamePrefix
   location: location
+  tags: {
+    Application: applicationTag
+    Function:    functionTag
+    CostCenter:  costCenterTag
+    CreatedBy:   createdBy
+    ManagedBy:   managedBy
+    Environment: environment
+    Location:    tagLocation
+  }
   properties: {
     hardwareProfile: {
-      vmSize: 'Standard_D2s_v6'
+      vmSize: vmSize
     }
     osProfile: {
-      computerName: fsnamePrefix
+      computerName:  fsnamePrefix
       adminUsername: adminUsername
       adminPassword: adminPassword
     }
     storageProfile: {
       imageReference: {
         publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: '2025-Datacenter'
-        version: 'latest'
+        offer:     'WindowsServer'
+        sku:       '2025-Datacenter-Gen2'
+        version:   'latest'
       }
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
           storageAccountType: 'Premium_LRS'
         }
+        hyperVGeneration: 'V2'
       }
-      dataDisks: [
-        {
-          lun: 0
-          createOption: 'Empty'
-          diskSizeGB: 1024
-          managedDisk: {
-            storageAccountType: 'Premium_LRS'
-          }
-        }
-      ]
     }
     networkProfile: {
-      networkInterfaces: [
-        {
-          id: nic.id
-        }
-      ]
+      networkInterfaces: [ { id: nic.id } ]
     }
-  }
-  tags: {
-    Application: applicationTag
-    Function: functionTag
-    CostCenter: costCenterTag
-    CreatedBy: createdBy
-    ManagedBy: managedBy
-    Environment: environment
-    Location: tagLocation
   }
 }
 

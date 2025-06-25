@@ -53,6 +53,9 @@ param subnetConfig array
 @description('Private IP address of the Azure Firewall')
 param firewallPrivateIpAddress string
 
+@description('List of subnet names NOT to associate NSGs to')
+param excludeFromNsg array = []
+
 var location = region
 
 // Route table creation
@@ -142,9 +145,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
   }
 }
 
-// 2. Create NSGs for each subnet
-resource subnetNSGs 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [for subnet in subnetConfig: if (associateNSGs) {
-  name: 'nsg-${subnet.name}-${vnetName}'
+// 2. Create NSGs for filtered subnets
+resource nsgCollection 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [
+  for sn in subnetConfig: if (associateNSGs && !contains(excludeFromNsg, sn.name)) {
+  name: 'nsg-${sn.name}-${vnetName}'
   location: location
   tags: {
     Application: applicationTag
@@ -169,7 +173,7 @@ resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' =
       id: resourceId('Microsoft.Network/networkSecurityGroups', 'nsg-${sn.name}-${vnetName}')
     }
   }
-  dependsOn: [ vnet, subnetNSGs ]
+  dependsOn: [ vnet, nsgCollection ]
 }]
 
 
