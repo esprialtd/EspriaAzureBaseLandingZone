@@ -65,9 +65,9 @@ resource domainServices 'Microsoft.AAD/domainServices@2022-12-01' = {
     }
     domainSecuritySettings: {
       tlsV1:           'Disabled'
-      ntlmV1:          'Disabled'      // you can disable NTLM v1 as well if you want
-      ldapSigning:     'Required'      // and any other hardening settings
-      channelBinding:  'Required'
+      ntlmV1:          'Disabled'     
+      ldapSigning:     'Enabled'      
+      channelBinding:  'Enabled'
     }
   }
 }

@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "13059135179472096096"
+      "templateHash": "12365364500906232034"
     }
   },
   "parameters": {
@@ -16,7 +16,7 @@
         "description": "Customer abbreviation 3 character (e.g., ESP)"
       }
     },
-    "customerAbbreviationlower": {
+    "customerAbbreviationLower": {
       "type": "string",
       "defaultValue": "[toLower(take(parameters('customerAbbreviation'), 3))]",
       "metadata": {
@@ -30,7 +30,7 @@
         "description": "Customer name (e.g., Espria Ltd)"
       }
     },
-    "customerdomainname": {
+    "customerDomainName": {
       "type": "string",
       "defaultValue": "espria.co.uk",
       "metadata": {
@@ -61,14 +61,14 @@
       "type": "string",
       "defaultValue": "[toUpper(take(parameters('region'), 3))]",
       "metadata": {
-        "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
+        "description": "Region short name (e.g., UKS, UKW, NEU, WEU)"
       }
     },
-    "regionAbbreviationlower": {
+    "regionAbbreviationLower": {
       "type": "string",
       "defaultValue": "[toLower(take(parameters('region'), 3))]",
       "metadata": {
-        "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
+        "description": "Region short name (e.g., uks, ukw, neu, weu)"
       }
     },
     "environment": {
@@ -2875,7 +2875,7 @@
             "value": "[parameters('region')]"
           },
           "domainName": {
-            "value": "[format('{0}', parameters('customerdomainname'))]"
+            "value": "[format('{0}', parameters('customerDomainName'))]"
           },
           "vnetName": {
             "value": "[variables('vnetNameCoreIdentity')]"
@@ -2903,7 +2903,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "276212128181530724"
+              "templateHash": "13669482294488418846"
             }
           },
           "parameters": {
@@ -3014,8 +3014,8 @@
                 "domainSecuritySettings": {
                   "tlsV1": "Disabled",
                   "ntlmV1": "Disabled",
-                  "ldapSigning": "Required",
-                  "channelBinding": "Required"
+                  "ldapSigning": "Enabled",
+                  "channelBinding": "Enabled"
                 }
               }
             }
@@ -3060,7 +3060,7 @@
             "value": "[parameters('environment')]"
           },
           "storageAccountName": {
-            "value": "[format('stfiles{0}{1}{2}01', parameters('environment'), parameters('customerAbbreviationlower'), parameters('regionAbbreviationlower'))]"
+            "value": "[format('stfiles{0}{1}{2}01', parameters('environment'), parameters('customerAbbreviationLower'), parameters('regionAbbreviationLower'))]"
           },
           "fileShareName": {
             "value": "sharedfiles"

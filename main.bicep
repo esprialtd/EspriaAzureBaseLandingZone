@@ -7,13 +7,13 @@
 param customerAbbreviation string
 
 @description('Customer abbreviation (e.g., ESP)')
-param customerAbbreviationlower string = toLower(take(customerAbbreviation,3))
+param customerAbbreviationLower string = toLower(take(customerAbbreviation,3))
 
 @description('Customer name (e.g., Espria Ltd)')
 param customerName string = 'Espria Ltd'
 
 @description('Customer domain name (e.g., espria.co.uk)')
-  param customerdomainname string = 'espria.co.uk'
+  param customerDomainName string = 'espria.co.uk'
 
 @description('Azure region (e.g., uksouth, ukwest)')
 @allowed([
@@ -27,11 +27,11 @@ param region string = 'uksouth'
 @description('Location for deployments')
 param location string = region
 
-@description('Region short name (e.g., UKS,UKW,NEU,WEU)')
+@description('Region short name (e.g., UKS, UKW, NEU, WEU)')
 param regionAbbreviation string = toUpper(take(region, 3))
 
-@description('Region short name (e.g., UKS,UKW,NEU,WEU)')
-param regionAbbreviationlower string = toLower(take(region, 3))
+@description('Region short name (e.g., uks, ukw, neu, weu)')
+param regionAbbreviationLower string = toLower(take(region, 3))
 
 @description('Environment (e.g., prod, dev, uat)')
 @allowed([
@@ -466,7 +466,7 @@ module aadds 'modules/identity/aadds.bicep' = {
   dependsOn: [connectivityCoreIdentity]
   params: {
     region: region
-    domainName: '${customerdomainname}'
+    domainName: '${customerDomainName}'
     vnetName: vnetNameCoreIdentity
     subnetName: 'EntraDomainServices'
     environment: environment
@@ -486,7 +486,7 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
     managedBy: managedBy
     tagLocation: tagLocation
     environment: environment
-    storageAccountName: 'stfiles${environment}${customerAbbreviationlower}${regionAbbreviationlower}01'
+    storageAccountName: 'stfiles${environment}${customerAbbreviationLower}${regionAbbreviationLower}01'
     fileShareName: 'sharedfiles'
     vnetId: connectivitySharedServices.outputs.vnetId
   }
