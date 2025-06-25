@@ -5,16 +5,48 @@
     "customerAbbreviation": {
       "value": ""
     },
+    "customerAbbreviationLower": {
+      "value": ""
+    },
+    "customerName": {
+      "value": ""
+    },
+    "customerDomainName": {
+      "value": ""
+    },
+    "region": {},
+    "location": {
+      "value": ""
+    },
+    "regionAbbreviation": {
+      "value": ""
+    },
+    "regionAbbreviationLower": {
+      "value": ""
+    },
+    "environment": {},
     "coreSubscriptionId": {
       "value": ""
     },
     "sharedSubscriptionId": {
       "value": ""
     },
+    "createdBy": {
+      "value": ""
+    },
+    "managedBy": {
+      "value": ""
+    },
+    "tagLocation": {
+      "value": ""
+    },
     "adminUsername": {
       "value": ""
     },
     "adminPassword": {
+      "value": ""
+    },
+    "onPremAddressPrefix": {
       "value": ""
     }
   }

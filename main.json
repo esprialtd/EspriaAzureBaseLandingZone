@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "15438208596055491439"
+      "templateHash": "2396880269213131353"
     }
   },
   "parameters": {
@@ -2422,7 +2422,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1128562121743335988"
+              "templateHash": "16501587232251696472"
             }
           },
           "parameters": {
@@ -2565,7 +2565,7 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter-Gen2",
+                    "sku": "2025-datacenter-g2",
                     "version": "latest"
                   },
                   "osDisk": {
@@ -2654,7 +2654,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "472044991269668313"
+              "templateHash": "2471495909028508594"
             }
           },
           "parameters": {
@@ -2827,7 +2827,7 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter-Gen2",
+                    "sku": "2025-datacenter-g2",
                     "version": "latest"
                   },
                   "osDisk": {
@@ -3328,7 +3328,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "3613290588744403959"
+              "templateHash": "1590225502977499267"
             }
           },
           "parameters": {
@@ -3478,7 +3478,7 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter-Gen2",
+                    "sku": "2025-datacenter-g2",
                     "version": "latest"
                   },
                   "osDisk": {
@@ -3564,7 +3564,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "7186623635646918943"
+              "templateHash": "8056664073946729736"
             }
           },
           "parameters": {
@@ -3714,7 +3714,7 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-Datacenter-Gen2",
+                    "sku": "2025-datacenter-g2",
                     "version": "latest"
                   },
                   "osDisk": {
