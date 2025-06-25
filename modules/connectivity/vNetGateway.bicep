@@ -44,6 +44,8 @@ resource publicIp1 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   location: region
   zones: [
     '1'
+    '2'
+    '3'
   ]
   sku: {
     name: 'Standard'
@@ -67,7 +69,9 @@ resource publicIp2 'Microsoft.Network/publicIPAddresses@2023-02-01' = {
   name: '${publicIpName}-02'
   location: region
   zones: [
+    '1'
     '2'
+    '3'
   ]
   sku: {
     name: 'Standard'

@@ -91,12 +91,16 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
     storageProfile: {
       imageReference: {
         publisher: 'MicrosoftWindowsServer'
-        offer: 'WindowsServer'
-        sku: '2025-datacenter'
-        version: 'latest'
+        offer:     'WindowsServer'
+        sku:       '2025-Datacenter-Gen2'
+        version:   'latest'
       }
       osDisk: {
         createOption: 'FromImage'
+        managedDisk: {
+          storageAccountType: 'Premium_ZRS'
+        }
+        diskSizeGB: 128
       }
     }
     networkProfile: {

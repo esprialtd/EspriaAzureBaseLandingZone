@@ -99,9 +99,9 @@ resource vm 'Microsoft.Compute/virtualMachines@2023-03-01' = {
       osDisk: {
         createOption: 'FromImage'
         managedDisk: {
-          storageAccountType: 'Premium_LRS'
+          storageAccountType: 'Premium_ZRS'
         }
-        hyperVGeneration: 'V2'
+        diskSizeGB: 128
       }
     }
     networkProfile: {

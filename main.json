@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "12365364500906232034"
+      "templateHash": "15438208596055491439"
     }
   },
   "parameters": {
@@ -756,7 +756,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "13429852202335463796"
+              "templateHash": "12909588611182016986"
             }
           },
           "parameters": {
@@ -852,7 +852,9 @@
               "name": "[format('{0}-01', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
               "zones": [
-                "1"
+                "1",
+                "2",
+                "3"
               ],
               "sku": {
                 "name": "Standard"
@@ -876,7 +878,9 @@
               "name": "[format('{0}-02', parameters('publicIpName'))]",
               "location": "[parameters('region')]",
               "zones": [
-                "2"
+                "1",
+                "2",
+                "3"
               ],
               "sku": {
                 "name": "Standard"
@@ -2418,7 +2422,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "18428154926764038328"
+              "templateHash": "1128562121743335988"
             }
           },
           "parameters": {
@@ -2561,11 +2565,15 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2025-datacenter",
+                    "sku": "2025-Datacenter-Gen2",
                     "version": "latest"
                   },
                   "osDisk": {
-                    "createOption": "FromImage"
+                    "createOption": "FromImage",
+                    "managedDisk": {
+                      "storageAccountType": "Premium_ZRS"
+                    },
+                    "diskSizeGB": 128
                   }
                 },
                 "networkProfile": {
@@ -2646,7 +2654,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "3070409090894783925"
+              "templateHash": "472044991269668313"
             }
           },
           "parameters": {
@@ -2827,7 +2835,7 @@
                     "managedDisk": {
                       "storageAccountType": "Premium_LRS"
                     },
-                    "hyperVGeneration": "V2"
+                    "diskSizeGB": 128
                   }
                 },
                 "networkProfile": {
@@ -3320,7 +3328,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "18375282575180494922"
+              "templateHash": "3613290588744403959"
             }
           },
           "parameters": {
@@ -3476,9 +3484,9 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "Premium_ZRS"
                     },
-                    "hyperVGeneration": "V2"
+                    "diskSizeGB": 128
                   }
                 },
                 "networkProfile": {
@@ -3556,7 +3564,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "1608539285681878480"
+              "templateHash": "7186623635646918943"
             }
           },
           "parameters": {
@@ -3712,9 +3720,9 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "Premium_ZRS"
                     },
-                    "hyperVGeneration": "V2"
+                    "diskSizeGB": 128
                   }
                 },
                 "networkProfile": {

@@ -109,7 +109,7 @@ resource vms 'Microsoft.Compute/virtualMachines@2023-03-01' = [for i in range(0,
         managedDisk: {
           storageAccountType: 'Premium_LRS'
         }
-        hyperVGeneration: 'V2'
+        diskSizeGB: 128
       }
     }
     networkProfile: {
