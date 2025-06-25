@@ -101,7 +101,7 @@ resource vms 'Microsoft.Compute/virtualMachines@2023-03-01' = [for i in range(0,
       imageReference: {
         publisher: 'MicrosoftWindowsServer'
         offer:     'WindowsServer'
-        sku:       '2022-Datacenter-Gen2'
+        sku:       '2025-Datacenter-Gen2'
         version:   'latest'
       }
       osDisk: {

@@ -6,12 +6,19 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "11797158522973147366"
+      "templateHash": "13059135179472096096"
     }
   },
   "parameters": {
     "customerAbbreviation": {
       "type": "string",
+      "metadata": {
+        "description": "Customer abbreviation 3 character (e.g., ESP)"
+      }
+    },
+    "customerAbbreviationlower": {
+      "type": "string",
+      "defaultValue": "[toLower(take(parameters('customerAbbreviation'), 3))]",
       "metadata": {
         "description": "Customer abbreviation (e.g., ESP)"
       }
@@ -53,6 +60,13 @@
     "regionAbbreviation": {
       "type": "string",
       "defaultValue": "[toUpper(take(parameters('region'), 3))]",
+      "metadata": {
+        "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
+      }
+    },
+    "regionAbbreviationlower": {
+      "type": "string",
+      "defaultValue": "[toLower(take(parameters('region'), 3))]",
       "metadata": {
         "description": "Region short name (e.g., UKS,UKW,NEU,WEU)"
       }
@@ -2632,7 +2646,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "13352441952624622872"
+              "templateHash": "3070409090894783925"
             }
           },
           "parameters": {
@@ -2805,7 +2819,7 @@
                   "imageReference": {
                     "publisher": "MicrosoftWindowsServer",
                     "offer": "WindowsServer",
-                    "sku": "2022-Datacenter-Gen2",
+                    "sku": "2025-Datacenter-Gen2",
                     "version": "latest"
                   },
                   "osDisk": {
@@ -2889,7 +2903,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "6121982298017570780"
+              "templateHash": "276212128181530724"
             }
           },
           "parameters": {
@@ -2967,7 +2981,7 @@
           "resources": [
             {
               "type": "Microsoft.AAD/domainServices",
-              "apiVersion": "2021-05-01",
+              "apiVersion": "2022-12-01",
               "name": "[parameters('domainName')]",
               "location": "[parameters('region')]",
               "tags": {
@@ -2996,6 +3010,12 @@
                 "notificationSettings": {
                   "notifyGlobalAdmins": "true",
                   "notifyDcAdmins": "true"
+                },
+                "domainSecuritySettings": {
+                  "tlsV1": "Disabled",
+                  "ntlmV1": "Disabled",
+                  "ldapSigning": "Required",
+                  "channelBinding": "Required"
                 }
               }
             }
@@ -3040,7 +3060,7 @@
             "value": "[parameters('environment')]"
           },
           "storageAccountName": {
-            "value": "[format('stfiles{0}{1}{2}01', parameters('environment'), parameters('customerAbbreviation'), parameters('regionAbbreviation'))]"
+            "value": "[format('stfiles{0}{1}{2}01', parameters('environment'), parameters('customerAbbreviationlower'), parameters('regionAbbreviationlower'))]"
           },
           "fileShareName": {
             "value": "sharedfiles"

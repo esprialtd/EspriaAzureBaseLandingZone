@@ -3,8 +3,11 @@
 // main.bicep - Root orchestration for cross-subscription base landing zone
 
 
-@description('Customer abbreviation (e.g., ESP)')
+@description('Customer abbreviation 3 character (e.g., ESP)')
 param customerAbbreviation string
+
+@description('Customer abbreviation (e.g., ESP)')
+param customerAbbreviationlower string = toLower(take(customerAbbreviation,3))
 
 @description('Customer name (e.g., Espria Ltd)')
 param customerName string = 'Espria Ltd'
@@ -26,6 +29,9 @@ param location string = region
 
 @description('Region short name (e.g., UKS,UKW,NEU,WEU)')
 param regionAbbreviation string = toUpper(take(region, 3))
+
+@description('Region short name (e.g., UKS,UKW,NEU,WEU)')
+param regionAbbreviationlower string = toLower(take(region, 3))
 
 @description('Environment (e.g., prod, dev, uat)')
 @allowed([
@@ -480,7 +486,7 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
     managedBy: managedBy
     tagLocation: tagLocation
     environment: environment
-    storageAccountName: 'stfiles${environment}${customerAbbreviation}${regionAbbreviation}01'
+    storageAccountName: 'stfiles${environment}${customerAbbreviationlower}${regionAbbreviationlower}01'
     fileShareName: 'sharedfiles'
     vnetId: connectivitySharedServices.outputs.vnetId
   }

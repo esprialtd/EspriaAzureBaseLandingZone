@@ -33,7 +33,7 @@ param functionTag string = 'Identity Services'
 @description('CostCenter tag value')
 param costCenterTag string = 'Core Services'
 
-resource domainServices 'Microsoft.AAD/domainServices@2021-05-01' = {
+resource domainServices 'Microsoft.AAD/domainServices@2022-12-01' = {
   name: domainName
   location: region
   tags: {
@@ -62,6 +62,12 @@ resource domainServices 'Microsoft.AAD/domainServices@2021-05-01' = {
     notificationSettings: {
       notifyGlobalAdmins: 'true'
       notifyDcAdmins: 'true'
+    }
+    domainSecuritySettings: {
+      tlsV1:           'Disabled'
+      ntlmV1:          'Disabled'      // you can disable NTLM v1 as well if you want
+      ldapSigning:     'Required'      // and any other hardening settings
+      channelBinding:  'Required'
     }
   }
 }
