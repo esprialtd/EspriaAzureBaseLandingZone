@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "15363723143658753301"
+      "templateHash": "10880056224171918012"
     }
   },
   "parameters": {
@@ -1249,10 +1249,6 @@
                 "addressPrefix": "10.101.8.0/24"
               },
               {
-                "name": "EntraDomainServices",
-                "addressPrefix": "10.101.9.0/24"
-              },
-              {
                 "name": "PrivateEndpoint",
                 "addressPrefix": "10.101.11.0/24"
               }
@@ -1307,7 +1303,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "6596181206459382959"
+              "templateHash": "6750624109339663831"
             }
           },
           "parameters": {
@@ -1514,12 +1510,6 @@
                     "name": "DomainControllers",
                     "properties": {
                       "addressPrefix": "10.101.8.0/24"
-                    }
-                  },
-                  {
-                    "name": "EntraDomainServices",
-                    "properties": {
-                      "addressPrefix": "10.101.9.0/24"
                     }
                   },
                   {
@@ -2867,179 +2857,6 @@
         "connectivityCoreIdentity"
       ]
     },
-    "aadds": {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "aadds",
-      "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[variables('rgCoreIdentity')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "region": {
-            "value": "[parameters('region')]"
-          },
-          "domainName": {
-            "value": "[format('{0}', parameters('customerDomainName'))]"
-          },
-          "vnetName": {
-            "value": "[variables('vnetNameCoreIdentity')]"
-          },
-          "subnetName": {
-            "value": "EntraDomainServices"
-          },
-          "environment": {
-            "value": "[parameters('environment')]"
-          },
-          "createdBy": {
-            "value": "[parameters('createdBy')]"
-          },
-          "managedBy": {
-            "value": "[parameters('managedBy')]"
-          },
-          "tagLocation": {
-            "value": "[parameters('tagLocation')]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.36.1.42791",
-              "templateHash": "13669482294488418846"
-            }
-          },
-          "parameters": {
-            "region": {
-              "type": "string",
-              "metadata": {
-                "description": "Azure region"
-              }
-            },
-            "domainName": {
-              "type": "string",
-              "metadata": {
-                "description": "Domain name for Entra Domain Services"
-              }
-            },
-            "vnetName": {
-              "type": "string",
-              "metadata": {
-                "description": "Virtual Network name for integration"
-              }
-            },
-            "subnetName": {
-              "type": "string",
-              "defaultValue": "EntraDomainServices",
-              "metadata": {
-                "description": "Subnet name to associate with AAD DS"
-              }
-            },
-            "createdBy": {
-              "type": "string",
-              "metadata": {
-                "description": "CreatedBy tag value"
-              }
-            },
-            "managedBy": {
-              "type": "string",
-              "metadata": {
-                "description": "ManagedBy tag value"
-              }
-            },
-            "environment": {
-              "type": "string",
-              "metadata": {
-                "description": "Environment tag value"
-              }
-            },
-            "tagLocation": {
-              "type": "string",
-              "metadata": {
-                "description": "Location tag value for tags (e.g., UK South)"
-              }
-            },
-            "applicationTag": {
-              "type": "string",
-              "defaultValue": "Entra Domain Services",
-              "metadata": {
-                "description": "Application tag value"
-              }
-            },
-            "functionTag": {
-              "type": "string",
-              "defaultValue": "Identity Services",
-              "metadata": {
-                "description": "Function tag value"
-              }
-            },
-            "costCenterTag": {
-              "type": "string",
-              "defaultValue": "Core Services",
-              "metadata": {
-                "description": "CostCenter tag value"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.AAD/domainServices",
-              "apiVersion": "2022-12-01",
-              "name": "[parameters('domainName')]",
-              "location": "[parameters('region')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "domainName": "[parameters('domainName')]",
-                "sku": "Standard",
-                "replicaSets": [
-                  {
-                    "location": "[parameters('region')]",
-                    "subnetId": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
-                  }
-                ],
-                "ldapsSettings": {
-                  "ldaps": "Disabled",
-                  "pfxCertificate": "",
-                  "pfxCertificatePassword": ""
-                },
-                "notificationSettings": {
-                  "notifyGlobalAdmins": "true",
-                  "notifyDcAdmins": "true"
-                },
-                "domainSecuritySettings": {
-                  "tlsV1": "Disabled",
-                  "ntlmV1": "Disabled",
-                  "ldapSigning": "Enabled",
-                  "channelBinding": "Enabled"
-                }
-              }
-            }
-          ],
-          "outputs": {
-            "aaddsId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.AAD/domainServices', parameters('domainName'))]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "connectivityCoreIdentity"
-      ]
-    },
     "azureFiles": {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
@@ -3276,242 +3093,6 @@
       "dependsOn": [
         "connectivitySharedServices",
         "sharedResourceGroups"
-      ]
-    },
-    "fileServer": {
-      "type": "Microsoft.Resources/deployments",
-      "apiVersion": "2022-09-01",
-      "name": "fileServer",
-      "subscriptionId": "[parameters('sharedSubscriptionId')]",
-      "resourceGroup": "[variables('rgSharedServices')]",
-      "properties": {
-        "expressionEvaluationOptions": {
-          "scope": "inner"
-        },
-        "mode": "Incremental",
-        "parameters": {
-          "vnetName": {
-            "value": "[variables('vnetNameSharedServices')]"
-          },
-          "subnetName": {
-            "value": "SharedServices"
-          },
-          "adminUsername": {
-            "value": "[parameters('adminUsername')]"
-          },
-          "adminPassword": {
-            "value": "[parameters('adminPassword')]"
-          },
-          "createdBy": {
-            "value": "[parameters('createdBy')]"
-          },
-          "managedBy": {
-            "value": "[parameters('managedBy')]"
-          },
-          "tagLocation": {
-            "value": "[parameters('tagLocation')]"
-          },
-          "location": {
-            "value": "[parameters('location')]"
-          },
-          "environment": {
-            "value": "[parameters('environment')]"
-          },
-          "fsnamePrefix": {
-            "value": "[format('{0}-AZ{1}-FS01', parameters('customerAbbreviation'), parameters('regionAbbreviation'))]"
-          }
-        },
-        "template": {
-          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-          "contentVersion": "1.0.0.0",
-          "metadata": {
-            "_generator": {
-              "name": "bicep",
-              "version": "0.36.1.42791",
-              "templateHash": "1590225502977499267"
-            }
-          },
-          "parameters": {
-            "fsnamePrefix": {
-              "type": "string",
-              "metadata": {
-                "description": "Name prefix for the VM"
-              }
-            },
-            "vmSize": {
-              "type": "string",
-              "defaultValue": "Standard_D2s_v6",
-              "metadata": {
-                "description": "VM size (must support Gen2 images)"
-              }
-            },
-            "location": {
-              "type": "string",
-              "metadata": {
-                "description": "Region for the deployment"
-              }
-            },
-            "vnetName": {
-              "type": "string",
-              "metadata": {
-                "description": "Virtual network name"
-              }
-            },
-            "subnetName": {
-              "type": "string",
-              "defaultValue": "SharedServices",
-              "metadata": {
-                "description": "Subnet name for the VM"
-              }
-            },
-            "adminUsername": {
-              "type": "string",
-              "metadata": {
-                "description": "Admin username"
-              }
-            },
-            "environment": {
-              "type": "string",
-              "metadata": {
-                "description": "Deployment environment"
-              }
-            },
-            "adminPassword": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Admin password"
-              }
-            },
-            "createdBy": {
-              "type": "string",
-              "metadata": {
-                "description": "CreatedBy tag value"
-              }
-            },
-            "managedBy": {
-              "type": "string",
-              "metadata": {
-                "description": "ManagedBy tag value"
-              }
-            },
-            "tagLocation": {
-              "type": "string",
-              "metadata": {
-                "description": "Location tag value"
-              }
-            },
-            "applicationTag": {
-              "type": "string",
-              "defaultValue": "Connectivity and Routing",
-              "metadata": {
-                "description": "Application tag"
-              }
-            },
-            "functionTag": {
-              "type": "string",
-              "defaultValue": "Core Management",
-              "metadata": {
-                "description": "Function tag"
-              }
-            },
-            "costCenterTag": {
-              "type": "string",
-              "defaultValue": "Core Services",
-              "metadata": {
-                "description": "Cost Center tag"
-              }
-            }
-          },
-          "resources": [
-            {
-              "type": "Microsoft.Network/networkInterfaces",
-              "apiVersion": "2023-04-01",
-              "name": "[format('nic-{0}', parameters('fsnamePrefix'))]",
-              "location": "[parameters('location')]",
-              "properties": {
-                "ipConfigurations": [
-                  {
-                    "name": "ipconfig1",
-                    "properties": {
-                      "subnet": {
-                        "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subnetName'))]"
-                      },
-                      "privateIPAllocationMethod": "Dynamic"
-                    }
-                  }
-                ]
-              },
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              }
-            },
-            {
-              "type": "Microsoft.Compute/virtualMachines",
-              "apiVersion": "2023-03-01",
-              "name": "[parameters('fsnamePrefix')]",
-              "location": "[parameters('location')]",
-              "tags": {
-                "Application": "[parameters('applicationTag')]",
-                "Function": "[parameters('functionTag')]",
-                "CostCenter": "[parameters('costCenterTag')]",
-                "CreatedBy": "[parameters('createdBy')]",
-                "ManagedBy": "[parameters('managedBy')]",
-                "Environment": "[parameters('environment')]",
-                "Location": "[parameters('tagLocation')]"
-              },
-              "properties": {
-                "hardwareProfile": {
-                  "vmSize": "[parameters('vmSize')]"
-                },
-                "osProfile": {
-                  "computerName": "[parameters('fsnamePrefix')]",
-                  "adminUsername": "[parameters('adminUsername')]",
-                  "adminPassword": "[parameters('adminPassword')]"
-                },
-                "storageProfile": {
-                  "imageReference": {
-                    "publisher": "MicrosoftWindowsServer",
-                    "offer": "WindowsServer",
-                    "sku": "2025-datacenter-g2",
-                    "version": "latest"
-                  },
-                  "osDisk": {
-                    "createOption": "FromImage",
-                    "managedDisk": {
-                      "storageAccountType": "Premium_ZRS"
-                    },
-                    "diskSizeGB": 128
-                  }
-                },
-                "networkProfile": {
-                  "networkInterfaces": [
-                    {
-                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('fsnamePrefix')))]"
-                    }
-                  ]
-                }
-              },
-              "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', format('nic-{0}', parameters('fsnamePrefix')))]"
-              ]
-            }
-          ],
-          "outputs": {
-            "fileServerId": {
-              "type": "string",
-              "value": "[resourceId('Microsoft.Compute/virtualMachines', parameters('fsnamePrefix'))]"
-            }
-          }
-        }
-      },
-      "dependsOn": [
-        "connectivitySharedServices"
       ]
     },
     "printServer": {
@@ -3802,18 +3383,6 @@
     "domainVmsIds": {
       "type": "array",
       "value": "[reference('domainVms').outputs.vmIds.value]"
-    },
-    "aaddsId": {
-      "type": "string",
-      "value": "[reference('aadds').outputs.aaddsId.value]"
-    },
-    "azureFilesId": {
-      "type": "string",
-      "value": "[reference('azureFiles').outputs.azureFilesId.value]"
-    },
-    "fileServerId": {
-      "type": "string",
-      "value": "[reference('fileServer').outputs.fileServerId.value]"
     },
     "firewallId": {
       "type": "string",
