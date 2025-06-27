@@ -128,10 +128,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
       addressPrefixes: [addressPrefix]
     }
     subnets: [
-      {
-        name: 'DomainControllers'
-        properties: { addressPrefix: '10.101.8.0/24' }
-      }
+//       {
+//         name: 'DomainControllers'
+//         properties: { addressPrefix: '10.101.8.0/24' }
+//       }
       {
         name: 'EntraDomainServices'
         properties: { addressPrefix: '10.101.9.0/24' }
