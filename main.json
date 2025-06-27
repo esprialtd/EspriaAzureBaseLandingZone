@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "2396880269213131353"
+      "templateHash": "15363723143658753301"
     }
   },
   "parameters": {
@@ -3044,8 +3044,8 @@
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2022-09-01",
       "name": "azureFiles",
-      "subscriptionId": "[parameters('coreSubscriptionId')]",
-      "resourceGroup": "[variables('rgCoreIdentity')]",
+      "subscriptionId": "[parameters('sharedSubscriptionId')]",
+      "resourceGroup": "[variables('rgSharedServices')]",
       "properties": {
         "expressionEvaluationOptions": {
           "scope": "inner"

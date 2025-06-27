@@ -478,7 +478,7 @@ module aadds 'modules/identity/aadds.bicep' = {
 // Azure Files for Shared Services
 module azureFiles 'modules/shared/azureFiles.bicep' = {
   name: 'azureFiles'
-  scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
+  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
   dependsOn: [sharedResourceGroups]
   params: {
     region: region
