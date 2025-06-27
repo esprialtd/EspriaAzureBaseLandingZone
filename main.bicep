@@ -228,10 +228,10 @@ module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep
         name: 'DomainControllers'
         addressPrefix: '10.101.8.0/24'
       }
-      {
-        name: 'EntraDomainServices'
-        addressPrefix: '10.101.9.0/24'
-      }
+//       {
+//         name: 'EntraDomainServices'
+//         addressPrefix: '10.101.9.0/24'
+//       }
       {
         name: 'PrivateEndpoint'
         addressPrefix: '10.101.11.0/24'
@@ -460,21 +460,21 @@ module domainVms 'modules/identity/domainVms.bicep' = {
   }
 }
 // Entra Domain Services (AADDS)
-module aadds 'modules/identity/aadds.bicep' = {
-  name: 'aadds'
-  scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
-  dependsOn: [connectivityCoreIdentity]
-  params: {
-    region: region
-    domainName: '${customerDomainName}'
-    vnetName: vnetNameCoreIdentity
-    subnetName: 'EntraDomainServices'
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-  }
-}
+// module aadds 'modules/identity/aadds.bicep' = {
+//   name: 'aadds'
+//   scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
+//   dependsOn: [connectivityCoreIdentity]
+//   params: {
+//     region: region
+//     domainName: '${customerDomainName}'
+//     vnetName: vnetNameCoreIdentity
+//     subnetName: 'EntraDomainServices'
+//     environment: environment
+//     createdBy: createdBy
+//     managedBy: managedBy
+//     tagLocation: tagLocation
+//   }
+// }
 // Azure Files for Shared Services
 module azureFiles 'modules/shared/azureFiles.bicep' = {
   name: 'azureFiles'
@@ -492,23 +492,23 @@ module azureFiles 'modules/shared/azureFiles.bicep' = {
   }
 }
 // File Server VM
-module fileServer 'modules/shared/fileVm.bicep' = {
-  name: 'fileServer'
-  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-  dependsOn: [connectivitySharedServices]
-  params: {
-    vnetName: vnetNameSharedServices
-    subnetName: 'SharedServices'
-    adminUsername: adminUsername
-    adminPassword: adminPassword
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    location: location
-    environment: environment
-    fsnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-FS01'
-  }
-}
+// module fileServer 'modules/shared/fileVm.bicep' = {
+//   name: 'fileServer'
+//   scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
+//   dependsOn: [connectivitySharedServices]
+//   params: {
+//     vnetName: vnetNameSharedServices
+//     subnetName: 'SharedServices'
+//     adminUsername: adminUsername
+//     adminPassword: adminPassword
+//     createdBy: createdBy
+//     managedBy: managedBy
+//     tagLocation: tagLocation
+//     location: location
+//     environment: environment
+//     fsnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-FS01'
+//   }
+// }
 
 // Print Server VM
 module printServer 'modules/shared/printVm.bicep' = {

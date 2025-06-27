@@ -132,10 +132,10 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-02-01' = {
         name: 'DomainControllers'
         properties: { addressPrefix: '10.101.8.0/24' }
       }
-      {
-        name: 'EntraDomainServices'
-        properties: { addressPrefix: '10.101.9.0/24' }
-      }
+//       {
+//         name: 'EntraDomainServices'
+//         properties: { addressPrefix: '10.101.9.0/24' }
+//       }
       {
         name: 'PrivateEndpoint'
         properties: { addressPrefix: '10.101.11.0/24' }
