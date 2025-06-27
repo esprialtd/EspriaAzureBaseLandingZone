@@ -22,10 +22,12 @@ The landing zone provisions the following:
 
 ---
 
-## Quick Deploy
-
+## Quick Deploy Full Deployment
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fmain.json)
-
+## IaaS Domain Controllers with Azure Files
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fadds_iaas_azurefiles%2Fmain.json)
+## PaaS Entra Domain Services with No Storage Solution
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Feds_paas%2Fmain.json)
 
 
 ## 🗂️ Directory Structure
