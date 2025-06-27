@@ -224,10 +224,6 @@ module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep
       'EntraDomainServices'
     ]
     subnetConfig: [
-//       {
-//         name: 'DomainControllers'
-//         addressPrefix: '10.101.8.0/24'
-//       }
       {
         name: 'EntraDomainServices'
         addressPrefix: '10.101.9.0/24'
@@ -440,25 +436,7 @@ module managementVm 'modules/management/managementVm.bicep' = {
     tagLocation: tagLocation
   }
 }
-// Domain Controller VMs
-// module domainVms 'modules/identity/domainVms.bicep' = {
-//   name: 'domainVms'
-//   scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
-//   dependsOn: [connectivityCoreIdentity]
-//   params: {
-//     customerAbbreviation: customerAbbreviation
-//     region: region
-//     regionAbbreviation: regionAbbreviation
-//     vnetName: vnetNameCoreIdentity
-//     subnetName: 'DomainControllers'
-//     environment: environment
-//     adminUsername: adminUsername
-//     adminPassword: adminPassword
-//     createdBy: createdBy
-//     managedBy: managedBy
-//     tagLocation: tagLocation
-//   }
-// }
+
 // Entra Domain Services (AADDS)
 module aadds 'modules/identity/aadds.bicep' = {
   name: 'aadds'
@@ -475,59 +453,6 @@ module aadds 'modules/identity/aadds.bicep' = {
     tagLocation: tagLocation
   }
 }
-// Azure Files for Shared Services
-// module azureFiles 'modules/shared/azureFiles.bicep' = {
-//  name: 'azureFiles'
-//  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-//  dependsOn: [sharedResourceGroups]
-//  params: {
-//    region: region
-//    createdBy: createdBy
-//    managedBy: managedBy
-//    tagLocation: tagLocation
-//    environment: environment
-//    storageAccountName: 'stfiles${environment}${customerAbbreviationLower}${regionAbbreviationLower}01'
-//    fileShareName: 'sharedfiles'
-//    vnetId: connectivitySharedServices.outputs.vnetId
-//  }
-// }
-// File Server VM
-// module fileServer 'modules/shared/fileVm.bicep' = {
-//   name: 'fileServer'
-//   scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-//   dependsOn: [connectivitySharedServices]
-//   params: {
-//     vnetName: vnetNameSharedServices
-//     subnetName: 'SharedServices'
-//     adminUsername: adminUsername
-//     adminPassword: adminPassword
-//     createdBy: createdBy
-//     managedBy: managedBy
-//     tagLocation: tagLocation
-//     location: location
-//     environment: environment
-//     fsnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-FS01'
-//   }
-// 
-
-// Print Server VM
-// module printServer 'modules/shared/printVm.bicep' = {
-//   name: 'printServer'
-//   scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-//   dependsOn: [connectivitySharedServices]
-//   params: {
-//     vnetName: vnetNameSharedServices
-//     subnetName: 'SharedServices'
-//     adminUsername: adminUsername
-//     adminPassword: adminPassword
-//     createdBy: createdBy
-//     managedBy: managedBy
-//     tagLocation: tagLocation
-//     location: location
-//     environment: environment
-//     prtnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-PRT01'
-//   }
-// }
 
 
 // Outputs
@@ -536,10 +461,7 @@ output identityVNetId string = connectivityCoreIdentity.outputs.vnetId
 output managementVNetId string = connectivityCoreManagement.outputs.vnetId
 output sharedServicesVNetId string = connectivitySharedServices.outputs.vnetId
 output managementVmId string = managementVm.outputs.managementServerId
-output domainVmsIds array = domainVms.outputs.vmIds
 output aaddsId string = aadds.outputs.aaddsId
-output azureFilesId string = azureFiles.outputs.azureFilesId
-output fileServerId string = fileServer.outputs.fileServerId
 output firewallId string = coreFirewall.outputs.firewallId
 output firewallPrivateIpAddress string = coreFirewall.outputs.firewallPrivateIpAddress
 output virtualNetworkGatewayId string = coreGateway.outputs.virtualNetworkGatewayId
