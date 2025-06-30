@@ -163,7 +163,7 @@ resource nsgCollection 'Microsoft.Network/networkSecurityGroups@2023-02-01' = [
 }]
 
 // 3. Associate NSGs to subnets via child resource, ensuring subnets & NSGs exist first
-resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [for sn in subnetConfig: if (associateNSGs) {
+resource subnetNsgAssoc 'Microsoft.Network/virtualNetworks/subnets@2023-02-01' = [for sn in subnetConfig: if (associateNSGs && !contains(excludeFromNsg, sn.name)) {
   parent: vnet
   name: sn.name
   properties: {

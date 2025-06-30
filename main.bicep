@@ -466,7 +466,7 @@ module aadds 'modules/identity/aadds.bicep' = {
   dependsOn: [connectivityCoreIdentity]
   params: {
     region: region
-    domainName: '${customerDomainName}'
+    domainName: customerDomainName
     vnetName: vnetNameCoreIdentity
     subnetName: 'EntraDomainServices'
     environment: environment

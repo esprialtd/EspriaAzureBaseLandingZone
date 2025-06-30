@@ -6,7 +6,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.36.1.42791",
-      "templateHash": "15363723143658753301"
+      "templateHash": "10971530780201168924"
     }
   },
   "parameters": {
@@ -1709,7 +1709,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.36.1.42791",
-              "templateHash": "18340030099204961743"
+              "templateHash": "12683507168361589900"
             }
           },
           "parameters": {
@@ -1959,7 +1959,7 @@
                 "name": "subnetNsgAssoc",
                 "count": "[length(parameters('subnetConfig'))]"
               },
-              "condition": "[parameters('associateNSGs')]",
+              "condition": "[and(parameters('associateNSGs'), not(contains(parameters('excludeFromNsg'), parameters('subnetConfig')[copyIndex()].name)))]",
               "type": "Microsoft.Network/virtualNetworks/subnets",
               "apiVersion": "2023-02-01",
               "name": "[format('{0}/{1}', parameters('vnetName'), parameters('subnetConfig')[copyIndex()].name)]",
@@ -2883,7 +2883,7 @@
             "value": "[parameters('region')]"
           },
           "domainName": {
-            "value": "[format('{0}', parameters('customerDomainName'))]"
+            "value": "[parameters('customerDomainName')]"
           },
           "vnetName": {
             "value": "[variables('vnetNameCoreIdentity')]"
