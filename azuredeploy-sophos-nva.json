@@ -1,0 +1,522 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "Espria-LZ-ARM-Builder",
+      "version": "3.0.0"
+    },
+    "displayName": "Espria LZ \u2013 Variant A: Hub-Spoke + Sophos XG NVA",
+    "description": "Deploys the Espria Azure Base Landing Zone using a hub-spoke VNet architecture with Sophos XG Network Virtual Appliance for firewall and VPN. IaaS Active Directory Domain Controllers. Azure Backup Enhanced Policy V2. Azure Site Recovery for the Management VM. Centralised monitoring and governance."
+  },
+  "parameters": {
+    "customerName": {
+      "type": "string",
+      "metadata": {
+        "description": "Customer full name (e.g. Contoso Ltd)"
+      }
+    },
+    "customerAbbreviation": {
+      "type": "string",
+      "metadata": {
+        "description": "3\u20135 character abbreviation used in all resource names (e.g. CON)"
+      },
+      "maxLength": 5
+    },
+    "customerDomainName": {
+      "type": "string",
+      "metadata": {
+        "description": "Active Directory domain name (e.g. contoso.local)"
+      }
+    },
+    "primaryRegion": {
+      "type": "string",
+      "metadata": {
+        "description": "Primary Azure region for the Landing Zone"
+      },
+      "allowedValues": [
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "brazilsoutheast",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "francecentral",
+        "francesouth",
+        "germanynorth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "jioindiacentral",
+        "jioindiawest",
+        "koreacentral",
+        "koreasouth",
+        "mexicocentral",
+        "newzealandnorth",
+        "northcentralus",
+        "northeurope",
+        "norwayeast",
+        "norwaywest",
+        "polandcentral",
+        "qatarcentral",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "swedensouth",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westeurope",
+        "westindia",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "defaultValue": "uksouth"
+    },
+    "secondaryRegion": {
+      "type": "string",
+      "metadata": {
+        "description": "Secondary Azure region. Set to \"auto\" to use the Microsoft-documented paired region."
+      },
+      "allowedValues": [
+        "auto",
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "brazilsoutheast",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "francecentral",
+        "francesouth",
+        "germanynorth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "jioindiacentral",
+        "jioindiawest",
+        "koreacentral",
+        "koreasouth",
+        "mexicocentral",
+        "newzealandnorth",
+        "northcentralus",
+        "northeurope",
+        "norwayeast",
+        "norwaywest",
+        "polandcentral",
+        "qatarcentral",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "swedensouth",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westeurope",
+        "westindia",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "defaultValue": "auto"
+    },
+    "deploySecondaryRegion": {
+      "type": "bool",
+      "metadata": {
+        "description": "Deploy resources into the secondary region. Set to false for primary-only."
+      },
+      "defaultValue": true
+    },
+    "environment": {
+      "type": "string",
+      "metadata": {
+        "description": "Deployment environment tag."
+      },
+      "allowedValues": [
+        "prod",
+        "dev",
+        "uat"
+      ],
+      "defaultValue": "prod"
+    },
+    "primaryRegionSiteId": {
+      "type": "int",
+      "metadata": {
+        "description": "Primary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+      },
+      "defaultValue": 101,
+      "minValue": 101,
+      "maxValue": 199
+    },
+    "secondaryRegionSiteId": {
+      "type": "int",
+      "metadata": {
+        "description": "Secondary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+      },
+      "defaultValue": 102,
+      "minValue": 101,
+      "maxValue": 199
+    },
+    "onPremAddressPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "On-premises address prefix used in spoke UDRs (e.g. 10.1.0.0/16)."
+      },
+      "defaultValue": "10.1.0.0/16"
+    },
+    "adminUsername": {
+      "type": "string",
+      "metadata": {
+        "description": "Local administrator username for all VMs."
+      },
+      "defaultValue": "espria-admin"
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "VM admin password. Minimum 12 characters with upper, lower, number and symbol."
+      }
+    },
+    "dcVmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Domain Controller VM size."
+      },
+      "allowedValues": [
+        "Standard_D2s_v4",
+        "Standard_D4s_v4",
+        "Standard_D8s_v4",
+        "Standard_D2ds_v4",
+        "Standard_D4ds_v4",
+        "Standard_D8ds_v4",
+        "Standard_D2as_v4",
+        "Standard_D4as_v4",
+        "Standard_D8as_v4",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D8ds_v5",
+        "Standard_D2as_v5",
+        "Standard_D4as_v5",
+        "Standard_D8as_v5",
+        "Standard_D2ads_v5",
+        "Standard_D4ads_v5",
+        "Standard_D8ads_v5",
+        "Standard_D2s_v6",
+        "Standard_D4s_v6",
+        "Standard_D8s_v6"
+      ],
+      "defaultValue": "Standard_D2s_v5"
+    },
+    "mgmtVmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Management jump VM size."
+      },
+      "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B4ms",
+        "Standard_B8ms",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5"
+      ],
+      "defaultValue": "Standard_B2ms"
+    },
+    "createdBy": {
+      "type": "string",
+      "metadata": {
+        "description": "Tag value for CreatedBy. Identifies who deployed this Landing Zone."
+      },
+      "defaultValue": "Espria"
+    },
+    "managedBy": {
+      "type": "string",
+      "metadata": {
+        "description": "Tag value for ManagedBy. Identifies the managing party."
+      },
+      "defaultValue": "Espria"
+    },
+    "alertEmailAddress": {
+      "type": "string",
+      "metadata": {
+        "description": "Email address for Azure Monitor Action Group alerts (Espria NOC)."
+      },
+      "defaultValue": "alerts@espria.com"
+    },
+    "lawRetentionDays": {
+      "type": "int",
+      "metadata": {
+        "description": "Log Analytics Workspace retention in days."
+      },
+      "defaultValue": 90,
+      "minValue": 30,
+      "maxValue": 730
+    },
+    "enableVmBackup": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Azure Backup Enhanced Policy V2 for DC VMs and the Management VM."
+      },
+      "defaultValue": true
+    },
+    "enableAsrMgmtVm": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Azure Site Recovery A2A replication for the Management VM (primary to secondary)."
+      },
+      "defaultValue": true
+    },
+    "sophosVmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Sophos XG NVA VM size. Must be from the approved D-series or F-series list."
+      },
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_D2s_v4",
+        "Standard_D4s_v4",
+        "Standard_D8s_v4",
+        "Standard_F2s_v2",
+        "Standard_F4s_v2",
+        "Standard_F8s_v2"
+      ],
+      "defaultValue": "Standard_D2s_v5"
+    },
+    "sophosImageVersion": {
+      "type": "string",
+      "metadata": {
+        "description": "Sophos XG Marketplace image version. Use \"latest\" or a specific version string."
+      },
+      "defaultValue": "latest"
+    },
+    "enableNvaDiskBackup": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Azure Disk Backup (Backup Vault) for the Sophos XG NVA OS disk."
+      },
+      "defaultValue": true
+    }
+  },
+  "variables": {
+    "deploymentName": "[concat('espria-lz-sophos-nva-', uniqueString(deployment().name))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[variables('deploymentName')]",
+      "location": "[parameters('primaryRegion')]",
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "Inner"
+        },
+        "parameters": {
+          "customerName": {
+            "value": "[parameters('customerName')]"
+          },
+          "customerAbbreviation": {
+            "value": "[parameters('customerAbbreviation')]"
+          },
+          "customerDomainName": {
+            "value": "[parameters('customerDomainName')]"
+          },
+          "primaryRegion": {
+            "value": "[parameters('primaryRegion')]"
+          },
+          "secondaryRegion": {
+            "value": "[parameters('secondaryRegion')]"
+          },
+          "deploySecondaryRegion": {
+            "value": "[parameters('deploySecondaryRegion')]"
+          },
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "primaryRegionSiteId": {
+            "value": "[parameters('primaryRegionSiteId')]"
+          },
+          "secondaryRegionSiteId": {
+            "value": "[parameters('secondaryRegionSiteId')]"
+          },
+          "onPremAddressPrefix": {
+            "value": "[parameters('onPremAddressPrefix')]"
+          },
+          "adminUsername": {
+            "value": "[parameters('adminUsername')]"
+          },
+          "adminPassword": {
+            "value": "[parameters('adminPassword')]"
+          },
+          "dcVmSize": {
+            "value": "[parameters('dcVmSize')]"
+          },
+          "mgmtVmSize": {
+            "value": "[parameters('mgmtVmSize')]"
+          },
+          "createdBy": {
+            "value": "[parameters('createdBy')]"
+          },
+          "managedBy": {
+            "value": "[parameters('managedBy')]"
+          },
+          "alertEmailAddress": {
+            "value": "[parameters('alertEmailAddress')]"
+          },
+          "lawRetentionDays": {
+            "value": "[parameters('lawRetentionDays')]"
+          },
+          "enableVmBackup": {
+            "value": "[parameters('enableVmBackup')]"
+          },
+          "enableAsrMgmtVm": {
+            "value": "[parameters('enableAsrMgmtVm')]"
+          },
+          "sophosVmSize": {
+            "value": "[parameters('sophosVmSize')]"
+          },
+          "sophosImageVersion": {
+            "value": "[parameters('sophosImageVersion')]"
+          },
+          "enableNvaDiskBackup": {
+            "value": "[parameters('enableNvaDiskBackup')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "customerName": {
+              "type": "string"
+            },
+            "customerAbbreviation": {
+              "type": "string"
+            },
+            "customerDomainName": {
+              "type": "string"
+            },
+            "primaryRegion": {
+              "type": "string"
+            },
+            "secondaryRegion": {
+              "type": "string"
+            },
+            "deploySecondaryRegion": {
+              "type": "bool"
+            },
+            "environment": {
+              "type": "string"
+            },
+            "primaryRegionSiteId": {
+              "type": "int"
+            },
+            "secondaryRegionSiteId": {
+              "type": "int"
+            },
+            "onPremAddressPrefix": {
+              "type": "string"
+            },
+            "adminUsername": {
+              "type": "string"
+            },
+            "adminPassword": {
+              "type": "securestring"
+            },
+            "dcVmSize": {
+              "type": "string"
+            },
+            "mgmtVmSize": {
+              "type": "string"
+            },
+            "createdBy": {
+              "type": "string"
+            },
+            "managedBy": {
+              "type": "string"
+            },
+            "alertEmailAddress": {
+              "type": "string"
+            },
+            "lawRetentionDays": {
+              "type": "int"
+            },
+            "enableVmBackup": {
+              "type": "bool"
+            },
+            "enableAsrMgmtVm": {
+              "type": "bool"
+            },
+            "sophosVmSize": {
+              "type": "string"
+            },
+            "sophosImageVersion": {
+              "type": "string"
+            },
+            "enableNvaDiskBackup": {
+              "type": "bool"
+            }
+          },
+          "resources": [],
+          "outputs": {
+            "deploymentNote": {
+              "type": "string",
+              "value": "[concat(\"Espria Azure Landing Zone (sophos-nva) \u2013 full deployment is managed via Bicep. This ARM wrapper provisions the parameter surface for the Deploy-to-Azure portal experience. Run az deployment sub create with variants/sophos-nva/main.bicep for the complete deployment.\")]"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "variantDeployed": {
+      "type": "string",
+      "value": "sophos-nva"
+    },
+    "primaryRegionDeployed": {
+      "type": "string",
+      "value": "[parameters('primaryRegion')]"
+    },
+    "customerDeployed": {
+      "type": "string",
+      "value": "[parameters('customerName')]"
+    }
+  }
+}
