@@ -54,7 +54,7 @@ param vpnGwScaleUnit int = 1
 
 @allowed(['adds', 'entrads'])
 @description('Identity type determines the firewall rule set (adds = IaaS DCs, entrads = Entra DS managed domain).')
-param identityType string = 'adds'
+param identityType string = 'entrads'
 
 @description('Secondary region site octet for firewall rules. Pass 0 if secondary not deployed.')
 param secondarySiteOctet int = 0

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "customerName": {
+      "value": "Contoso Ltd"
+    },
+    "customerAbbreviation": {
+      "value": "CON"
+    },
+    "customerDomainName": {
+      "value": "contoso.local"
+    },
+    "primaryRegion": {
+      "value": "uksouth"
+    },
+    "secondaryRegion": {
+      "value": "ukwest"
+    },
+    "deploySecondaryRegion": {
+      "value": true
+    },
+    "environment": {
+      "value": "prod"
+    },
+    "primaryRegionSiteId": {
+      "value": 101
+    },
+    "secondaryRegionSiteId": {
+      "value": 102
+    },
+    "onPremAddressPrefix": {
+      "value": "10.1.0.0/16"
+    },
+    "adminUsername": {
+      "value": "espria-admin"
+    },
+    "adminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<KV_RG>/providers/Microsoft.KeyVault/vaults/<KV_NAME>"
+        },
+        "secretName": "lz-admin-password"
+      }
+    },
+    "dcVmSize": {
+      "value": "Standard_D2s_v5"
+    },
+    "mgmtVmSize": {
+      "value": "Standard_B2ms"
+    },
+    "createdBy": {
+      "value": "Espria"
+    },
+    "managedBy": {
+      "value": "Espria"
+    },
+    "tagLocationPrimary": {
+      "value": "UK South"
+    },
+    "tagLocationSecondary": {
+      "value": "UK West"
+    },
+    "enableVmBackup": {
+      "value": true
+    },
+    "enableAsrMgmtVm": {
+      "value": true
+    },
+    "alertEmailAddress": {
+      "value": "alerts@espria.com"
+    },
+    "lawRetentionDays": {
+      "value": 90
+    },
+    "enableNvaDiskBackup": {
+      "value": false
+    },
+    "firewallSkuTier": {
+      "value": "Premium"
+    },
+    "vpnGwSku": {
+      "value": "VpnGw1AZ"
+    },
+    "bgpAsn": {
+      "value": 65000
+    }
+  }
+}

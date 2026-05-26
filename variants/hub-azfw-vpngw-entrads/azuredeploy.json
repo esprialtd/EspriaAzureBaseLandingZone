@@ -6,8 +6,8 @@
       "name": "Espria-LZ-ARM-Builder",
       "version": "3.1.0"
     },
-    "displayName": "Espria LZ \u2013 B: vWAN + Azure Firewall + AD DS",
-    "description": "Azure Virtual WAN (Standard) with Azure Firewall Premium. Hub at 10.{siteId}.0.0/23. Optional vWAN VPN Gateway. IaaS AD DS Domain Controllers."
+    "displayName": "Espria LZ \u2013 C (Entra DS): Hub-Spoke + Azure Firewall + VPN GW + Entra DS",
+    "description": "Hub-spoke VNet with Azure Firewall Premium and optional VPN Gateway. Microsoft Entra Domain Services."
   },
   "parameters": {
     "customerName": {
@@ -26,7 +26,7 @@
     "customerDomainName": {
       "type": "string",
       "metadata": {
-        "description": "Domain name."
+        "description": "Managed domain name. Must be routable (e.g. aadds.contoso.com). .local is NOT supported."
       }
     },
     "primaryRegion": {
@@ -302,24 +302,10 @@
       },
       "defaultValue": true
     },
-    "primaryHubPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "vWAN Hub prefix (primary). Leave empty to auto-derive 10.{siteId}.0.0/23."
-      },
-      "defaultValue": ""
-    },
-    "secondaryHubPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "vWAN Hub prefix (secondary). Leave empty to auto-derive."
-      },
-      "defaultValue": ""
-    },
     "firewallSkuTier": {
       "type": "string",
       "metadata": {
-        "description": "Azure Firewall SKU tier."
+        "description": "Azure Firewall SKU."
       },
       "allowedValues": [
         "Premium",
@@ -327,32 +313,66 @@
       ],
       "defaultValue": "Premium"
     },
+    "vpnGwSku": {
+      "type": "string",
+      "metadata": {
+        "description": "VPN GW SKU."
+      },
+      "allowedValues": [
+        "VpnGw1AZ",
+        "VpnGw2AZ",
+        "VpnGw3AZ",
+        "VpnGw1",
+        "VpnGw2",
+        "VpnGw3"
+      ],
+      "defaultValue": "VpnGw1AZ"
+    },
+    "bgpAsn": {
+      "type": "int",
+      "metadata": {
+        "description": "BGP ASN."
+      },
+      "defaultValue": 65000,
+      "minValue": 1,
+      "maxValue": 65534
+    },
     "deployVpnGateway": {
       "type": "bool",
       "metadata": {
-        "description": "Deploy vWAN VPN Gateway (~30 min extra provisioning)."
+        "description": "Deploy active-active VPN Gateway."
       },
       "defaultValue": false
-    },
-    "vpnGwScaleUnit": {
-      "type": "int",
-      "metadata": {
-        "description": "vWAN VPN GW scale unit (1=500 Mbps)."
-      },
-      "defaultValue": 1,
-      "minValue": 1,
-      "maxValue": 20
     },
     "enableNvaDiskBackup": {
       "type": "bool",
       "metadata": {
-        "description": "NVA disk backup \u2013 always false, no NVA in this variant."
+        "description": "Always false \u2013 no NVA."
+      },
+      "defaultValue": false
+    },
+    "entraDsSku": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra DS SKU. Enterprise required for replica sets."
+      },
+      "allowedValues": [
+        "Enterprise",
+        "Standard",
+        "Premium"
+      ],
+      "defaultValue": "Enterprise"
+    },
+    "enableSecureLdap": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Secure LDAP. Certificate required post-deployment."
       },
       "defaultValue": false
     }
   },
   "variables": {
-    "deploymentName": "[concat('espria-lz-vwan-azfw-', uniqueString(deployment().name))]"
+    "deploymentName": "[concat('espria-lz-hub-azfw-vpngw-entrads-', uniqueString(deployment().name))]"
   },
   "resources": [
     {
@@ -426,23 +446,26 @@
           "enableAsrMgmtVm": {
             "value": "[parameters('enableAsrMgmtVm')]"
           },
-          "primaryHubPrefix": {
-            "value": "[parameters('primaryHubPrefix')]"
-          },
-          "secondaryHubPrefix": {
-            "value": "[parameters('secondaryHubPrefix')]"
-          },
           "firewallSkuTier": {
             "value": "[parameters('firewallSkuTier')]"
+          },
+          "vpnGwSku": {
+            "value": "[parameters('vpnGwSku')]"
+          },
+          "bgpAsn": {
+            "value": "[parameters('bgpAsn')]"
           },
           "deployVpnGateway": {
             "value": "[parameters('deployVpnGateway')]"
           },
-          "vpnGwScaleUnit": {
-            "value": "[parameters('vpnGwScaleUnit')]"
-          },
           "enableNvaDiskBackup": {
             "value": "[parameters('enableNvaDiskBackup')]"
+          },
+          "entraDsSku": {
+            "value": "[parameters('entraDsSku')]"
+          },
+          "enableSecureLdap": {
+            "value": "[parameters('enableSecureLdap')]"
           }
         },
         "template": {
@@ -509,22 +532,25 @@
             "enableAsrMgmtVm": {
               "type": "bool"
             },
-            "primaryHubPrefix": {
-              "type": "string"
-            },
-            "secondaryHubPrefix": {
-              "type": "string"
-            },
             "firewallSkuTier": {
               "type": "string"
+            },
+            "vpnGwSku": {
+              "type": "string"
+            },
+            "bgpAsn": {
+              "type": "int"
             },
             "deployVpnGateway": {
               "type": "bool"
             },
-            "vpnGwScaleUnit": {
-              "type": "int"
-            },
             "enableNvaDiskBackup": {
+              "type": "bool"
+            },
+            "entraDsSku": {
+              "type": "string"
+            },
+            "enableSecureLdap": {
               "type": "bool"
             }
           },
@@ -532,7 +558,7 @@
           "outputs": {
             "note": {
               "type": "string",
-              "value": "[concat(\"Espria LZ (vwan-azfw) \u2013 deploy via variants/vwan-azfw/main.bicep for full infrastructure\")]"
+              "value": "[concat(\"Espria LZ (hub-azfw-vpngw-entrads) \u2013 deploy via variants/hub-azfw-vpngw-entrads/main.bicep for full infrastructure\")]"
             }
           }
         }
@@ -542,7 +568,7 @@
   "outputs": {
     "variantDeployed": {
       "type": "string",
-      "value": "vwan-azfw"
+      "value": "hub-azfw-vpngw-entrads"
     },
     "primaryRegion": {
       "type": "string",

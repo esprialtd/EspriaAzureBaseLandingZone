@@ -6,8 +6,8 @@
       "name": "Espria-LZ-ARM-Builder",
       "version": "3.1.0"
     },
-    "displayName": "Espria LZ \u2013 B: vWAN + Azure Firewall + AD DS",
-    "description": "Azure Virtual WAN (Standard) with Azure Firewall Premium. Hub at 10.{siteId}.0.0/23. Optional vWAN VPN Gateway. IaaS AD DS Domain Controllers."
+    "displayName": "Espria LZ \u2013 A (Entra DS): Hub-Spoke + Sophos XG NVA + Entra DS",
+    "description": "Hub-spoke VNet with Sophos XG NVA (BYOL). Microsoft Entra Domain Services (PaaS managed domain). Domain must be routable."
   },
   "parameters": {
     "customerName": {
@@ -26,7 +26,7 @@
     "customerDomainName": {
       "type": "string",
       "metadata": {
-        "description": "Domain name."
+        "description": "Managed domain name. Must be routable (e.g. aadds.contoso.com). .local is NOT supported."
       }
     },
     "primaryRegion": {
@@ -302,57 +302,57 @@
       },
       "defaultValue": true
     },
-    "primaryHubPrefix": {
+    "sophosVmSize": {
       "type": "string",
       "metadata": {
-        "description": "vWAN Hub prefix (primary). Leave empty to auto-derive 10.{siteId}.0.0/23."
-      },
-      "defaultValue": ""
-    },
-    "secondaryHubPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "vWAN Hub prefix (secondary). Leave empty to auto-derive."
-      },
-      "defaultValue": ""
-    },
-    "firewallSkuTier": {
-      "type": "string",
-      "metadata": {
-        "description": "Azure Firewall SKU tier."
+        "description": "Sophos XG VM size."
       },
       "allowedValues": [
-        "Premium",
-        "Standard"
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_F2s_v2",
+        "Standard_F4s_v2",
+        "Standard_F8s_v2"
       ],
-      "defaultValue": "Premium"
+      "defaultValue": "Standard_D2s_v5"
     },
-    "deployVpnGateway": {
-      "type": "bool",
+    "sophosImageVersion": {
+      "type": "string",
       "metadata": {
-        "description": "Deploy vWAN VPN Gateway (~30 min extra provisioning)."
+        "description": "Sophos XG image version."
       },
-      "defaultValue": false
-    },
-    "vpnGwScaleUnit": {
-      "type": "int",
-      "metadata": {
-        "description": "vWAN VPN GW scale unit (1=500 Mbps)."
-      },
-      "defaultValue": 1,
-      "minValue": 1,
-      "maxValue": 20
+      "defaultValue": "latest"
     },
     "enableNvaDiskBackup": {
       "type": "bool",
       "metadata": {
-        "description": "NVA disk backup \u2013 always false, no NVA in this variant."
+        "description": "Azure Disk Backup for Sophos XG NVA."
+      },
+      "defaultValue": true
+    },
+    "entraDsSku": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra DS SKU. Enterprise required for replica sets."
+      },
+      "allowedValues": [
+        "Enterprise",
+        "Standard",
+        "Premium"
+      ],
+      "defaultValue": "Enterprise"
+    },
+    "enableSecureLdap": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Secure LDAP. Certificate required post-deployment."
       },
       "defaultValue": false
     }
   },
   "variables": {
-    "deploymentName": "[concat('espria-lz-vwan-azfw-', uniqueString(deployment().name))]"
+    "deploymentName": "[concat('espria-lz-sophos-nva-entrads-', uniqueString(deployment().name))]"
   },
   "resources": [
     {
@@ -426,23 +426,20 @@
           "enableAsrMgmtVm": {
             "value": "[parameters('enableAsrMgmtVm')]"
           },
-          "primaryHubPrefix": {
-            "value": "[parameters('primaryHubPrefix')]"
+          "sophosVmSize": {
+            "value": "[parameters('sophosVmSize')]"
           },
-          "secondaryHubPrefix": {
-            "value": "[parameters('secondaryHubPrefix')]"
-          },
-          "firewallSkuTier": {
-            "value": "[parameters('firewallSkuTier')]"
-          },
-          "deployVpnGateway": {
-            "value": "[parameters('deployVpnGateway')]"
-          },
-          "vpnGwScaleUnit": {
-            "value": "[parameters('vpnGwScaleUnit')]"
+          "sophosImageVersion": {
+            "value": "[parameters('sophosImageVersion')]"
           },
           "enableNvaDiskBackup": {
             "value": "[parameters('enableNvaDiskBackup')]"
+          },
+          "entraDsSku": {
+            "value": "[parameters('entraDsSku')]"
+          },
+          "enableSecureLdap": {
+            "value": "[parameters('enableSecureLdap')]"
           }
         },
         "template": {
@@ -509,22 +506,19 @@
             "enableAsrMgmtVm": {
               "type": "bool"
             },
-            "primaryHubPrefix": {
+            "sophosVmSize": {
               "type": "string"
             },
-            "secondaryHubPrefix": {
+            "sophosImageVersion": {
               "type": "string"
-            },
-            "firewallSkuTier": {
-              "type": "string"
-            },
-            "deployVpnGateway": {
-              "type": "bool"
-            },
-            "vpnGwScaleUnit": {
-              "type": "int"
             },
             "enableNvaDiskBackup": {
+              "type": "bool"
+            },
+            "entraDsSku": {
+              "type": "string"
+            },
+            "enableSecureLdap": {
               "type": "bool"
             }
           },
@@ -532,7 +526,7 @@
           "outputs": {
             "note": {
               "type": "string",
-              "value": "[concat(\"Espria LZ (vwan-azfw) \u2013 deploy via variants/vwan-azfw/main.bicep for full infrastructure\")]"
+              "value": "[concat(\"Espria LZ (sophos-nva-entrads) \u2013 deploy via variants/sophos-nva-entrads/main.bicep for full infrastructure\")]"
             }
           }
         }
@@ -542,7 +536,7 @@
   "outputs": {
     "variantDeployed": {
       "type": "string",
-      "value": "vwan-azfw"
+      "value": "sophos-nva-entrads"
     },
     "primaryRegion": {
       "type": "string",

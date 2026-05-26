@@ -4,10 +4,10 @@
   "metadata": {
     "_generator": {
       "name": "Espria-LZ-ARM-Builder",
-      "version": "3.0.0"
+      "version": "3.1.0"
     },
-    "displayName": "Espria LZ \u2013 Variant C: Hub-Spoke + Azure Firewall + Active-Active VPN Gateway",
-    "description": "Deploys the Espria Azure Base Landing Zone using hub-spoke VNet architecture with Azure Firewall Premium and an active-active zone-redundant VPN Gateway (VpnGw1AZ, BGP enabled). Spoke UDRs route all traffic to the Azure Firewall private IP. IaaS Active Directory Domain Controllers. Azure Backup Enhanced Policy V2. Azure Site Recovery for the Management VM."
+    "displayName": "Espria LZ \u2013 C: Hub-Spoke + Azure Firewall + VPN GW + AD DS",
+    "description": "Hub-spoke VNet with Azure Firewall Premium and optional active-active VPN Gateway. IaaS AD DS Domain Controllers."
   },
   "parameters": {
     "customerName": {
@@ -26,13 +26,13 @@
     "customerDomainName": {
       "type": "string",
       "metadata": {
-        "description": "Active Directory domain name (e.g. contoso.local)"
+        "description": "Domain name."
       }
     },
     "primaryRegion": {
       "type": "string",
       "metadata": {
-        "description": "Primary Azure region for the Landing Zone"
+        "description": "Primary Azure region."
       },
       "allowedValues": [
         "australiacentral",
@@ -94,7 +94,7 @@
     "secondaryRegion": {
       "type": "string",
       "metadata": {
-        "description": "Secondary Azure region. Set to \"auto\" to use the Microsoft-documented paired region."
+        "description": "Secondary Azure region. \"auto\" = Microsoft-paired region."
       },
       "allowedValues": [
         "auto",
@@ -157,14 +157,14 @@
     "deploySecondaryRegion": {
       "type": "bool",
       "metadata": {
-        "description": "Deploy resources into the secondary region. Set to false for primary-only."
+        "description": "Deploy secondary region."
       },
       "defaultValue": true
     },
     "environment": {
       "type": "string",
       "metadata": {
-        "description": "Deployment environment tag."
+        "description": "Deployment environment."
       },
       "allowedValues": [
         "prod",
@@ -176,7 +176,7 @@
     "primaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Primary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Primary site ID (101\u2013199). 2nd octet of 10.x.0.0/16."
       },
       "defaultValue": 101,
       "minValue": 101,
@@ -185,7 +185,7 @@
     "secondaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Secondary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Secondary site ID (101\u2013199)."
       },
       "defaultValue": 102,
       "minValue": 101,
@@ -194,27 +194,27 @@
     "onPremAddressPrefix": {
       "type": "string",
       "metadata": {
-        "description": "On-premises address prefix used in spoke UDRs (e.g. 10.1.0.0/16)."
+        "description": "On-premises CIDR used in UDRs."
       },
       "defaultValue": "10.1.0.0/16"
     },
     "adminUsername": {
       "type": "string",
       "metadata": {
-        "description": "Local administrator username for all VMs."
+        "description": "VM admin username."
       },
       "defaultValue": "espria-admin"
     },
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "VM admin password. Minimum 12 characters with upper, lower, number and symbol."
+        "description": "VM admin password (12+ chars, upper+lower+number+symbol)."
       }
     },
     "dcVmSize": {
       "type": "string",
       "metadata": {
-        "description": "Domain Controller VM size."
+        "description": "DC VM size."
       },
       "allowedValues": [
         "Standard_D2s_v4",
@@ -247,7 +247,7 @@
     "mgmtVmSize": {
       "type": "string",
       "metadata": {
-        "description": "Management jump VM size."
+        "description": "Management VM size."
       },
       "allowedValues": [
         "Standard_B2ms",
@@ -261,28 +261,28 @@
     "createdBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for CreatedBy. Identifies who deployed this Landing Zone."
+        "description": "CreatedBy tag."
       },
       "defaultValue": "Espria"
     },
     "managedBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for ManagedBy. Identifies the managing party."
+        "description": "ManagedBy tag."
       },
       "defaultValue": "Espria"
     },
     "alertEmailAddress": {
       "type": "string",
       "metadata": {
-        "description": "Email address for Azure Monitor Action Group alerts (Espria NOC)."
+        "description": "Azure Monitor alert email."
       },
       "defaultValue": "alerts@espria.com"
     },
     "lawRetentionDays": {
       "type": "int",
       "metadata": {
-        "description": "Log Analytics Workspace retention in days."
+        "description": "Log Analytics retention days."
       },
       "defaultValue": 90,
       "minValue": 30,
@@ -291,21 +291,21 @@
     "enableVmBackup": {
       "type": "bool",
       "metadata": {
-        "description": "Enable Azure Backup Enhanced Policy V2 for DC VMs and the Management VM."
+        "description": "Azure Backup Enhanced Policy V2 for VMs."
       },
       "defaultValue": true
     },
     "enableAsrMgmtVm": {
       "type": "bool",
       "metadata": {
-        "description": "Enable Azure Site Recovery A2A replication for the Management VM (primary to secondary)."
+        "description": "ASR A2A for Management VM."
       },
       "defaultValue": true
     },
     "firewallSkuTier": {
       "type": "string",
       "metadata": {
-        "description": "Azure Firewall SKU tier. Premium enables IDPS and TLS inspection. Standard is lower cost."
+        "description": "Azure Firewall SKU."
       },
       "allowedValues": [
         "Premium",
@@ -316,7 +316,7 @@
     "vpnGwSku": {
       "type": "string",
       "metadata": {
-        "description": "VPN Gateway SKU. VpnGw1AZ is zone-redundant and supports active-active with BGP. Use VpnGw2AZ or VpnGw3AZ for higher throughput."
+        "description": "VPN GW SKU."
       },
       "allowedValues": [
         "VpnGw1AZ",
@@ -331,16 +331,23 @@
     "bgpAsn": {
       "type": "int",
       "metadata": {
-        "description": "BGP Autonomous System Number for the Azure VPN Gateway. Must differ from your on-premises ASN. Azure reserved ranges 65515\u201365534 must not be used."
+        "description": "BGP ASN for Azure VPN GW."
       },
       "defaultValue": 65000,
       "minValue": 1,
       "maxValue": 65534
     },
+    "deployVpnGateway": {
+      "type": "bool",
+      "metadata": {
+        "description": "Deploy active-active VPN Gateway."
+      },
+      "defaultValue": false
+    },
     "enableNvaDiskBackup": {
       "type": "bool",
       "metadata": {
-        "description": "Enable NVA disk backup. Always false for this variant \u2013 no NVA is deployed."
+        "description": "NVA disk backup \u2013 always false, no NVA."
       },
       "defaultValue": false
     }
@@ -429,6 +436,9 @@
           "bgpAsn": {
             "value": "[parameters('bgpAsn')]"
           },
+          "deployVpnGateway": {
+            "value": "[parameters('deployVpnGateway')]"
+          },
           "enableNvaDiskBackup": {
             "value": "[parameters('enableNvaDiskBackup')]"
           }
@@ -506,15 +516,18 @@
             "bgpAsn": {
               "type": "int"
             },
+            "deployVpnGateway": {
+              "type": "bool"
+            },
             "enableNvaDiskBackup": {
               "type": "bool"
             }
           },
           "resources": [],
           "outputs": {
-            "deploymentNote": {
+            "note": {
               "type": "string",
-              "value": "[concat(\"Espria Azure Landing Zone (hub-azfw-vpngw) \u2013 full deployment is managed via Bicep. This ARM wrapper provisions the parameter surface for the Deploy-to-Azure portal experience. Run az deployment sub create with variants/hub-azfw-vpngw/main.bicep for the complete deployment.\")]"
+              "value": "[concat(\"Espria LZ (hub-azfw-vpngw) \u2013 deploy via variants/hub-azfw-vpngw/main.bicep for full infrastructure\")]"
             }
           }
         }
@@ -526,11 +539,11 @@
       "type": "string",
       "value": "hub-azfw-vpngw"
     },
-    "primaryRegionDeployed": {
+    "primaryRegion": {
       "type": "string",
       "value": "[parameters('primaryRegion')]"
     },
-    "customerDeployed": {
+    "customer": {
       "type": "string",
       "value": "[parameters('customerName')]"
     }

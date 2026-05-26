@@ -23,7 +23,7 @@ parameters:
     displayName: 'Landing Zone Variant'
     type: string
     default: 'sophos-nva'
-    values: [sophos-nva, vwan-azfw, hub-azfw-vpngw]
+    values: [sophos-nva, vwan-azfw, hub-azfw-vpngw, sophos-nva-entrads, vwan-azfw-entrads, hub-azfw-vpngw-entrads]
 
   - name: primaryRegion
     displayName: 'Primary Azure Region'
@@ -142,7 +142,7 @@ stages:
 
                 - task: AzureCLI@2
                   displayName: 'Accept Sophos Marketplace Terms (sophos-nva only)'
-                  condition: eq('${{ parameters.variant }}', 'sophos-nva')
+                  condition: or(eq('${{ parameters.variant }}','sophos-nva'),eq('${{ parameters.variant }}','sophos-nva-entrads'))
                   inputs:
                     azureSubscription: 'sc-espria-lz-subscription'
                     scriptType: bash

@@ -29,8 +29,15 @@ param customerName string
 @maxLength(5)
 param customerAbbreviation string
 
-@description('Active Directory domain name (e.g. contoso.local)')
+@description('Entra Domain Services managed domain name. Must be routable (e.g. aadds.contoso.com). .local is not supported.')
 param customerDomainName string
+
+@description('Entra DS SKU. Enterprise required for replica sets (secondary region). Standard for primary-only.')
+@allowed(['Enterprise','Standard','Premium'])
+param entraDsSku string = 'Enterprise'
+
+@description('Enable Secure LDAP on the managed domain. Certificate must be configured post-deployment.')
+param enableSecureLdap bool = false
 
 // ---------------------------------------------------------------------------
 // Region Parameters
@@ -103,8 +110,8 @@ param deployVpnGateway bool = false
 param vpnGwScaleUnit int = 1
 
 @allowed(['adds', 'entrads'])
-@description('Identity type for firewall rule selection. ADDS variant uses "adds".')
-param identityType string = 'adds'
+@description('Identity type for firewall rule selection. ENTRADS variant uses "entrads".')
+param identityType string = 'entrads'
 
 @description('On-premises address prefix (used in firewall rules)')
 param onPremAddressPrefix string = '10.1.0.0/16'
@@ -243,7 +250,7 @@ var commonTags = {
   Environment: env
   Customer:    customerName
   DeployedBy:  'Espria-LZ-Bicep'
-  Variant:     'vwan-azfw'
+  Variant:     'vwan-azfw-entrads'
 }
 
 // ===========================================================================
@@ -429,7 +436,7 @@ module secVwanHub './connectivity/vwanHub.bicep' = if (deploySecondaryRegion) {
 // hubVnetId not needed in vWAN variant – pass empty string; the shared
 // identity module uses hubVnetId only for peering which doesn't apply here.
 // ===========================================================================
-module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
+module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
   name: 'deploy-pri-identity'
   scope: resourceGroup(rgPriIdentity)
   dependsOn: [priVwanHub, priIdentitySpokeVnet]
@@ -446,7 +453,9 @@ module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
     onPremAddressPrefix:  onPremAddressPrefix
     adminUsername:        adminUsername
     adminPassword:        adminPassword
-    dcCount:              2
+    dcCount:              0
+    entraDsSku:           entraDsSku
+    enableSecureLdap:     enableSecureLdap
     dcVmSize:             dcVmSize
     customerDomainName:   customerDomainName
     tags:                 commonTags
@@ -476,7 +485,7 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
   }
 }
 
-module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deploySecondaryRegion) {
+module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity'
   scope: resourceGroup(rgSecIdentity)
   dependsOn: [secVwanHub, secIdentitySpokeVnet]
@@ -493,7 +502,9 @@ module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deployS
     onPremAddressPrefix:  onPremAddressPrefix
     adminUsername:        adminUsername
     adminPassword:        adminPassword
-    dcCount:              1
+    dcCount:              0
+    entraDsSku:           entraDsSku
+    enableSecureLdap:     enableSecureLdap
     dcVmSize:             dcVmSize
     customerDomainName:   customerDomainName
     tags:                 commonTags
@@ -567,25 +578,8 @@ module governancePolicies '../../shared/governance/policies.bicep' = {
 // ===========================================================================
 // BACKUP (shared)
 // ===========================================================================
-module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
-  name: 'deploy-backup-identity-primary'
-  scope: resourceGroup(rgPriIdentity)
-  dependsOn: [priIdentity]
-  params: {
-    location:             primaryRegion
-    environment:          env
-    customerAbbreviation: custAbbr
-    region:               primaryRegion
-    resourceGroupContext: 'identity'
-    tags:                 commonTags
-    vmBackupTargets: [for i in range(0, 2): {
-      vmId:   priIdentity.outputs.dcVmIds[i]
-      vmName: priIdentity.outputs.dcVmNames[i]
-      rgName: rgPriIdentity
-    }]
-    diskBackupTargets: []
-  }
-}
+// Identity backup: not deployed for Entra DS variants — Microsoft manages all backups
+// and HA for the managed domain. Azure Backup is not applicable to the PaaS identity layer.
 
 module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-management-primary'

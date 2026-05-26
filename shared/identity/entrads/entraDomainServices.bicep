@@ -1,91 +1,170 @@
 // =============================================================================
 // shared/identity/entrads/entraDomainServices.bicep
-// Microsoft Entra Domain Services (formerly Azure AD DS) – Identity Module
+// Microsoft Entra Domain Services – Identity Module
 //
-// STATUS: Placeholder for future Entra DS variants.
-// When ADDS variants are branched to Entra DS versions, this module replaces
-// shared/identity/adds/identityVnet.bicep in the respective main.bicep files.
+// Same VNet/subnet address space as identityVnet.bicep (ADDS variant).
+// DomainControllers subnet renamed to EntraDomainServices with mandatory NSG.
+// Output contract matches identityVnet.bicep exactly.
 //
-// Design Decisions vs IaaS ADDS (recorded for future implementation):
-//
-// 1. MANAGED SERVICE – no VM administration required.
-//    Entra DS is a fully managed PaaS identity service. No DC VMs to patch,
-//    backup, or manage. Authentication, Group Policy, LDAP, and Kerberos are
-//    provided by Microsoft.
-//
-// 2. SINGLE-REGION – Entra DS does not support cross-region replication.
-//    A replica set can be added in a second region but it shares the same
-//    managed domain. Each replica set requires a dedicated subnet (/24 min).
-//    The secondary region replica set is added as a separate resource after
-//    the primary managed domain is provisioned and healthy (typically 30–45 min).
-//
-// 3. DOMAIN NAME RESTRICTIONS – Entra DS requires a routable domain suffix
-//    (e.g. aadds.contoso.com) or an onmicrosoft.com subdomain. Non-routable
-//    suffixes such as .local are not supported.
-//
-// 4. SUBNET REQUIREMENTS – Entra DS requires a dedicated subnet (/24 minimum)
-//    with no other resources. An NSG with specific inbound rules is mandatory:
-//    - Allow 443 from AzureActiveDirectoryDomainServices service tag
-//    - Allow 5986 from CorpNetSaw service tag (for management plane)
-//    - Allow all outbound to Internet
-//    Failure to apply these NSG rules causes provisioning failure.
-//
-// 5. DOMAIN JOIN – Entra DS uses the same DNS server IPs as IaaS DCs (auto-
-//    assigned by the managed domain). VNet DNS settings should point to the
-//    managed domain's DNS IPs (available as outputs after provisioning).
-//
-// 6. LICENSING – Entra DS requires Microsoft Entra ID P1 or P2 licenses for
-//    all users who authenticate against the managed domain.
-//
-// 7. BACKUP – No Azure Backup needed; Microsoft manages all backups and HA.
-//    ASR is not applicable for Entra DS.
-//
-// 8. OUTPUT CONTRACT – This module MUST expose the same outputs as
-//    identityVnet.bicep so main.bicep files require no conditional changes:
-//      output identityVnetId  string
-//      output dcVmIds         array   ← empty array for Entra DS
-//      output dcVmNames       array   ← empty array for Entra DS
-//      output dc1StaticIp     string  ← first DNS server IP from managed domain
-//      output dc2StaticIp     string  ← second DNS server IP from managed domain
-//      output routeTableId    string
-//
-// IMPLEMENTATION NOTES:
-//   - Microsoft.AAD/domainServices resource API: 2022-12-01
-//   - Replica sets: Microsoft.AAD/domainServices/replicaSets API: 2022-12-01
-//   - Provisioning time: 30–60 minutes; module must allow for this
-//   - DNS IPs only available after provisioning completes (not at deploy time)
-//   - Use a deployment script resource or post-deployment step to retrieve DNS IPs
-//   - SKU: Enterprise (supports replica sets) or Standard
+// Domain name: Must be routable (e.g. aadds.contoso.com). .local not supported.
+// Provisioning time: 30–60 minutes after deployment.
 // =============================================================================
-
-// This file intentionally contains no deployable resources.
-// Implementation is tracked as a future sprint item.
-// Branch naming convention: feature/entrads-{variant}
-// e.g. feature/entrads-sophos-nva, feature/entrads-vwan-azfw
 
 param location string
 param environment string
 param customerAbbreviation string
+@description('Not used – retained for output contract compatibility')
 param regionAbbreviation string
 param vnetName string
 param addressPrefix string
 param siteOctet int
+@description('Hub VNet ID for peering. Empty string for vWAN variant.')
 param hubVnetId string
+@description('Next-hop IP for UDRs. Empty string for vWAN variant.')
 param nextHopIp string
-param onPremAddressPrefix string
-param adminUsername string = ''       // Not used for Entra DS – retained for contract compatibility
+param onPremAddressPrefix string = '10.1.0.0/16'
+@description('Not used – retained for contract compatibility')
+param adminUsername string = ''
 @secure()
-param adminPassword string = ''       // Not used for Entra DS – retained for contract compatibility
-param dcCount int = 0                 // Not applicable – Entra DS is managed
-param dcVmSize string = ''            // Not applicable
+@description('Not used – retained for contract compatibility')
+param adminPassword string = ''
+@description('Not used – retained for contract compatibility')
+param dcCount int = 0
+@description('Not used – retained for contract compatibility')
+param dcVmSize string = ''
+@description('Managed domain name. Must be routable (e.g. aadds.contoso.com).')
 param customerDomainName string
+@allowed(['Enterprise','Standard','Premium'])
+@description('Enterprise required for replica sets (secondary region).')
+param entraDsSku string = 'Enterprise'
+@description('Enable Secure LDAP. Certificate must be configured post-deployment.')
+param enableSecureLdap bool = false
 param tags object
 
-// Placeholder outputs matching the ADDS module output contract
-// These will be populated by the actual Entra DS implementation
-output identityVnetId  string = 'PLACEHOLDER-entrads-not-yet-implemented'
+var custAbbr      = toUpper(customerAbbreviation)
+var env           = environment
+var isVwan        = empty(hubVnetId)
+var subnetEntraDs = '10.${siteOctet}.8.0/24'
+var subnetPrivEp  = '10.${siteOctet}.11.0/24'
+var rtName        = 'rt-${env}-core-identity-${custAbbr}-${location}-01'
+
+// Mandatory NSG for EntraDomainServices subnet
+resource nsgEntraDs 'Microsoft.Network/networkSecurityGroups@2023-06-01' = {
+  name: 'nsg-EntraDomainServices-${vnetName}'
+  location: location
+  tags: union(tags, { Function: 'Identity', Purpose: 'EntraDS-NSG' })
+  properties: {
+    securityRules: [
+      { name: 'AllowSyncWithAzureAD', properties: { priority: 101, direction: 'Inbound', access: 'Allow', protocol: 'Tcp', sourceAddressPrefix: 'AzureActiveDirectoryDomainServices', sourcePortRange: '*', destinationAddressPrefix: '*', destinationPortRange: '443', description: 'Required: management plane sync' } }
+      { name: 'AllowPSRemoting',      properties: { priority: 301, direction: 'Inbound', access: 'Allow', protocol: 'Tcp', sourceAddressPrefix: 'AzureActiveDirectoryDomainServices', sourcePortRange: '*', destinationAddressPrefix: '*', destinationPortRange: '5986', description: 'Required: WinRM management plane' } }
+      { name: 'AllowRD',              properties: { priority: 201, direction: 'Inbound', access: 'Allow', protocol: 'Tcp', sourceAddressPrefix: 'CorpNetSaw', sourcePortRange: '*', destinationAddressPrefix: '*', destinationPortRange: '3389', description: 'Required: RDP diagnostics' } }
+      { name: 'AllowVnetInbound',     properties: { priority: 401, direction: 'Inbound', access: 'Allow', protocol: '*', sourceAddressPrefix: 'VirtualNetwork', sourcePortRange: '*', destinationAddressPrefix: 'VirtualNetwork', destinationPortRange: '*', description: 'Allow intra-VNet' } }
+      { name: 'DenyAllInbound',       properties: { priority: 4096, direction: 'Inbound', access: 'Deny', protocol: '*', sourceAddressPrefix: '*', sourcePortRange: '*', destinationAddressPrefix: '*', destinationPortRange: '*', description: 'Deny all other inbound' } }
+      { name: 'AllowAllOutbound',     properties: { priority: 100, direction: 'Outbound', access: 'Allow', protocol: '*', sourceAddressPrefix: '*', sourcePortRange: '*', destinationAddressPrefix: '*', destinationPortRange: '*', description: 'Required: managed domain health reporting' } }
+    ]
+  }
+}
+
+resource nsgPrivEp 'Microsoft.Network/networkSecurityGroups@2023-06-01' = {
+  name: 'nsg-PrivateEndpoint-${vnetName}'
+  location: location
+  tags: tags
+  properties: { securityRules: [] }
+}
+
+// Route table – hub-spoke only; vWAN uses routing intent
+resource routeTable 'Microsoft.Network/routeTables@2023-06-01' = if (!isVwan) {
+  name: rtName
+  location: location
+  tags: union(tags, { Function: 'Identity', Purpose: 'UDR-Identity' })
+  properties: {
+    disableBgpRoutePropagation: false
+    routes: [
+      { name: 'default-to-fw',   properties: { addressPrefix: '0.0.0.0/0',        nextHopType: 'VirtualAppliance', nextHopIpAddress: nextHopIp } }
+      { name: 'on-prem-to-fw',   properties: { addressPrefix: onPremAddressPrefix, nextHopType: 'VirtualAppliance', nextHopIpAddress: nextHopIp } }
+    ]
+  }
+}
+
+resource identityVnet 'Microsoft.Network/virtualNetworks@2023-06-01' = {
+  name: vnetName
+  location: location
+  tags: union(tags, { Function: 'Identity', Purpose: 'Entra-DS-Spoke', IdentityType: 'EntraDS' })
+  properties: {
+    addressSpace: { addressPrefixes: [addressPrefix] }
+    // DNS IPs configured post-provisioning via PD-01 step
+    subnets: [
+      {
+        name: 'EntraDomainServices'
+        properties: {
+          addressPrefix:                  subnetEntraDs
+          networkSecurityGroup:           { id: nsgEntraDs.id }
+          routeTable:                     (!isVwan) ? { id: routeTable.id } : null
+          privateEndpointNetworkPolicies: 'Disabled'
+        }
+      }
+      {
+        name: 'PrivateEndpoint'
+        properties: {
+          addressPrefix:                  subnetPrivEp
+          networkSecurityGroup:           { id: nsgPrivEp.id }
+          routeTable:                     (!isVwan) ? { id: routeTable.id } : null
+          privateEndpointNetworkPolicies: 'Disabled'
+        }
+      }
+    ]
+  }
+}
+
+resource spokeToHubPeering 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-06-01' = if (!isVwan && !empty(hubVnetId)) {
+  parent: identityVnet
+  name: 'peer-to-hub'
+  properties: { remoteVirtualNetwork: { id: hubVnetId }, allowVirtualNetworkAccess: true, allowForwardedTraffic: true, allowGatewayTransit: false, useRemoteGateways: false }
+}
+
+// Entra Domain Services managed domain
+resource entraDomain 'Microsoft.AAD/domainServices@2022-12-01' = {
+  name: customerDomainName
+  location: location
+  tags: union(tags, { Function: 'Identity', Purpose: 'Entra-DS-Managed-Domain' })
+  properties: {
+    domainName: customerDomainName
+    sku:        entraDsSku
+    filteredSync:            'Disabled'
+    domainConfigurationType: 'FullySynced'
+    replicaSets: [
+      {
+        location: location
+        subnetId: resourceId('Microsoft.Network/virtualNetworks/subnets', vnetName, 'EntraDomainServices')
+      }
+    ]
+    domainSecuritySettings: {
+      ntlmV1:               'Disabled'
+      tlsV1:                'Disabled'
+      syncNtlmPasswords:    'Enabled'
+      syncOnPremPasswords:  'Enabled'
+      kerberosRc4Encryption: 'Disabled'
+      kerberosArmoring:      'Enabled'
+    }
+    ldapsSettings: {
+      ldaps:          enableSecureLdap ? 'Enabled' : 'Disabled'
+      externalAccess: 'Disabled'
+    }
+    notificationSettings: {
+      notifyGlobalAdmins: 'Enabled'
+      notifyDcAdmins:     'Enabled'
+      additionalRecipients: []
+    }
+  }
+  dependsOn: [identityVnet, nsgEntraDs]
+}
+
+// Outputs – identical contract to identityVnet.bicep
+output identityVnetId  string = identityVnet.id
 output dcVmIds         array  = []
 output dcVmNames       array  = []
-output dc1StaticIp     string = 'PLACEHOLDER-retrieve-after-provisioning'
-output dc2StaticIp     string = 'PLACEHOLDER-retrieve-after-provisioning'
-output routeTableId    string = 'PLACEHOLDER-entrads-not-yet-implemented'
+output dc1StaticIp     string = 'pending-provisioning'
+output dc2StaticIp     string = 'pending-provisioning'
+output routeTableId    string = (!isVwan) ? routeTable.id : ''
+output entraDomainId   string = entraDomain.id
+output entraDomainName string = entraDomain.name

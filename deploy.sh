@@ -29,7 +29,8 @@ usage() {
   echo "Usage: $0 -v <variant> -s <sub-id> -n <name> -a <abbr> -d <domain> [options]"
   echo ""
   echo -e "${BOLD}Required:${RESET}"
-  echo "  -v  Variant: sophos-nva | vwan-azfw | hub-azfw-vpngw"
+  echo "  -v  Variant: sophos-nva | vwan-azfw | hub-azfw-vpngw
+             sophos-nva-entrads | vwan-azfw-entrads | hub-azfw-vpngw-entrads"
   echo "  -s  Azure subscription ID"
   echo "  -n  Customer full name (e.g. \"Contoso Ltd\")"
   echo "  -a  Customer abbreviation, max 5 chars (e.g. CON)"
@@ -83,7 +84,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ── Validate required args ────────────────────────────────────────────────────
-[[ "$VARIANT" =~ ^(sophos-nva|vwan-azfw|hub-azfw-vpngw)$ ]] || { echo -e "${RED}Invalid variant: $VARIANT${RESET}"; exit 1; }
+[[ "$VARIANT" =~ ^(sophos-nva|vwan-azfw|hub-azfw-vpngw|sophos-nva-entrads|vwan-azfw-entrads|hub-azfw-vpngw-entrads)$ ]] || { echo -e "${RED}Invalid variant: $VARIANT${RESET}"; exit 1; }
 [[ -n "$SUBSCRIPTION" && -n "$CUSTOMER_NAME" && -n "$CUSTOMER_ABBR" && -n "$CUSTOMER_DOMAIN" ]] || { usage; exit 1; }
 
 BICEP_FILE="$(dirname "$0")/variants/${VARIANT}/main.bicep"
@@ -104,7 +105,7 @@ echo -e "${CYAN}Setting subscription: $SUBSCRIPTION${RESET}"
 az account set --subscription "$SUBSCRIPTION"
 
 # ── Accept Sophos Marketplace terms (sophos-nva only) ────────────────────────
-if [[ "$VARIANT" == "sophos-nva" && "$WHAT_IF" == "false" && "$MGMT_GROUPS_ONLY" == "false" ]]; then
+if [[ ("$VARIANT" == "sophos-nva" || "$VARIANT" == "sophos-nva-entrads") && "$WHAT_IF" == "false" && "$MGMT_GROUPS_ONLY" == "false" ]]; then
   echo -e "${CYAN}Accepting Sophos XG Marketplace terms...${RESET}"
   az vm image terms accept --publisher sophos --offer sophos-xg --plan byol \
     --subscription "$SUBSCRIPTION" 2>/dev/null || true

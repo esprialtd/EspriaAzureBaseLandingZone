@@ -4,8 +4,8 @@
 //
 // Connectivity model : Hub-Spoke VNet (same as Sophos variant)
 // Firewall           : Azure Firewall Premium (standalone in AzureFirewallSubnet)
-// VPN                : Active-Active VPN Gateway (VpnGw1AZ, BGP enabled)
-// Identity           : IaaS Active Directory Domain Services (shared module)
+// VPN                : Active-Active VPN Gateway (VpnGw1AZ, BGP enabled, optional)
+// Identity           : Microsoft Entra Domain Services (managed domain)
 // Routing            : UDRs on spokes pointing 0.0.0.0/0 to Azure Firewall private IP
 // Hub-to-Hub         : Explicit VNet peering (same as Sophos variant)
 //
@@ -30,8 +30,15 @@ param customerName string
 @maxLength(5)
 param customerAbbreviation string
 
-@description('Active Directory domain name (e.g. contoso.local)')
+@description('Entra Domain Services managed domain name. Must be routable (e.g. aadds.contoso.com). .local is not supported.')
 param customerDomainName string
+
+@description('Entra DS SKU. Enterprise required for replica sets (secondary region). Standard for primary-only.')
+@allowed(['Enterprise','Standard','Premium'])
+param entraDsSku string = 'Enterprise'
+
+@description('Enable Secure LDAP on the managed domain. Certificate must be configured post-deployment.')
+param enableSecureLdap bool = false
 
 // ---------------------------------------------------------------------------
 // Region Parameters
@@ -102,8 +109,8 @@ param vpnGwSku string = 'VpnGw1AZ'
 param bgpAsn int = 65000
 
 @allowed(['adds', 'entrads'])
-@description('Identity type for firewall rules. Inherited from variant — set to "adds" for this variant.')
-param identityType string = 'adds'
+@description('Identity type for firewall rules. Inherited from variant — set to "entrads" for this variant.')
+param identityType string = 'entrads'
 
 @description('Deploy the active-active VPN Gateway. Set to false to deploy Azure Firewall only without site-to-site VPN. GatewaySubnet is always reserved in the hub VNet.')
 param deployVpnGateway bool = false
@@ -222,7 +229,7 @@ var commonTags = {
   Environment: env
   Customer:    customerName
   DeployedBy:  'Espria-LZ-Bicep'
-  Variant:     'hub-azfw-vpngw'
+  Variant:     'hub-azfw-vpngw-entrads'
 }
 
 // ===========================================================================
@@ -291,7 +298,7 @@ module secConnectivity './connectivity/hubConnectivityAzfw.bicep' = if (deploySe
 // ===========================================================================
 // IDENTITY (shared module – nextHopIp = Azure Firewall private IP)
 // ===========================================================================
-module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
+module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
   name: 'deploy-pri-identity'
   scope: resourceGroup(rgPriIdentity)
   dependsOn: [rgsPrimary, priConnectivity]
@@ -303,7 +310,9 @@ module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
     nextHopIp: priConnectivity.outputs.firewallPrivateIp
     onPremAddressPrefix: onPremAddressPrefix
     adminUsername: adminUsername, adminPassword: adminPassword
-    dcCount: 2, dcVmSize: dcVmSize, customerDomainName: customerDomainName
+    dcCount: 0, dcVmSize: '', customerDomainName: customerDomainName
+    entraDsSku: entraDsSku
+    enableSecureLdap: enableSecureLdap
     tags: commonTags
   }
 }
@@ -325,7 +334,7 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
   }
 }
 
-module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deploySecondaryRegion) {
+module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity'
   scope: resourceGroup(rgSecIdentity)
   dependsOn: [rgsSecondary, secConnectivity]
@@ -337,7 +346,9 @@ module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deployS
     nextHopIp: deploySecondaryRegion ? secConnectivity.outputs.firewallPrivateIp : ''
     onPremAddressPrefix: onPremAddressPrefix
     adminUsername: adminUsername, adminPassword: adminPassword
-    dcCount: 1, dcVmSize: dcVmSize, customerDomainName: customerDomainName
+    dcCount: 0, dcVmSize: '', customerDomainName: customerDomainName
+    entraDsSku: entraDsSku
+    enableSecureLdap: enableSecureLdap
     tags: commonTags
   }
 }
@@ -448,22 +459,8 @@ module governancePolicies '../../shared/governance/policies.bicep' = {
   }
 }
 
-module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
-  name: 'deploy-backup-identity-primary'
-  scope: resourceGroup(rgPriIdentity)
-  dependsOn: [priIdentity]
-  params: {
-    location: primaryRegion, environment: env
-    customerAbbreviation: custAbbr, region: primaryRegion
-    resourceGroupContext: 'identity', tags: commonTags
-    vmBackupTargets: [for i in range(0, 2): {
-      vmId: priIdentity.outputs.dcVmIds[i]
-      vmName: priIdentity.outputs.dcVmNames[i]
-      rgName: rgPriIdentity
-    }]
-    diskBackupTargets: []
-  }
-}
+// Identity backup: not deployed for Entra DS variants — Microsoft manages all backups
+// and HA for the managed domain. Azure Backup is not applicable to the PaaS identity layer.
 
 module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-management-primary'

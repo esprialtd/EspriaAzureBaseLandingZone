@@ -4,10 +4,10 @@
   "metadata": {
     "_generator": {
       "name": "Espria-LZ-ARM-Builder",
-      "version": "3.0.0"
+      "version": "3.1.0"
     },
-    "displayName": "Espria LZ \u2013 Variant A: Hub-Spoke + Sophos XG NVA",
-    "description": "Deploys the Espria Azure Base Landing Zone using a hub-spoke VNet architecture with Sophos XG Network Virtual Appliance for firewall and VPN. IaaS Active Directory Domain Controllers. Azure Backup Enhanced Policy V2. Azure Site Recovery for the Management VM. Centralised monitoring and governance."
+    "displayName": "Espria LZ \u2013 A: Hub-Spoke + Sophos XG NVA + AD DS",
+    "description": "Hub-spoke VNet with Sophos XG NVA (BYOL). IaaS AD DS Domain Controllers."
   },
   "parameters": {
     "customerName": {
@@ -26,13 +26,13 @@
     "customerDomainName": {
       "type": "string",
       "metadata": {
-        "description": "Active Directory domain name (e.g. contoso.local)"
+        "description": "Domain name."
       }
     },
     "primaryRegion": {
       "type": "string",
       "metadata": {
-        "description": "Primary Azure region for the Landing Zone"
+        "description": "Primary Azure region."
       },
       "allowedValues": [
         "australiacentral",
@@ -94,7 +94,7 @@
     "secondaryRegion": {
       "type": "string",
       "metadata": {
-        "description": "Secondary Azure region. Set to \"auto\" to use the Microsoft-documented paired region."
+        "description": "Secondary Azure region. \"auto\" = Microsoft-paired region."
       },
       "allowedValues": [
         "auto",
@@ -157,14 +157,14 @@
     "deploySecondaryRegion": {
       "type": "bool",
       "metadata": {
-        "description": "Deploy resources into the secondary region. Set to false for primary-only."
+        "description": "Deploy secondary region."
       },
       "defaultValue": true
     },
     "environment": {
       "type": "string",
       "metadata": {
-        "description": "Deployment environment tag."
+        "description": "Deployment environment."
       },
       "allowedValues": [
         "prod",
@@ -176,7 +176,7 @@
     "primaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Primary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Primary site ID (101\u2013199). 2nd octet of 10.x.0.0/16."
       },
       "defaultValue": 101,
       "minValue": 101,
@@ -185,7 +185,7 @@
     "secondaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Secondary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Secondary site ID (101\u2013199)."
       },
       "defaultValue": 102,
       "minValue": 101,
@@ -194,27 +194,27 @@
     "onPremAddressPrefix": {
       "type": "string",
       "metadata": {
-        "description": "On-premises address prefix used in spoke UDRs (e.g. 10.1.0.0/16)."
+        "description": "On-premises CIDR used in UDRs."
       },
       "defaultValue": "10.1.0.0/16"
     },
     "adminUsername": {
       "type": "string",
       "metadata": {
-        "description": "Local administrator username for all VMs."
+        "description": "VM admin username."
       },
       "defaultValue": "espria-admin"
     },
     "adminPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "VM admin password. Minimum 12 characters with upper, lower, number and symbol."
+        "description": "VM admin password (12+ chars, upper+lower+number+symbol)."
       }
     },
     "dcVmSize": {
       "type": "string",
       "metadata": {
-        "description": "Domain Controller VM size."
+        "description": "DC VM size."
       },
       "allowedValues": [
         "Standard_D2s_v4",
@@ -247,7 +247,7 @@
     "mgmtVmSize": {
       "type": "string",
       "metadata": {
-        "description": "Management jump VM size."
+        "description": "Management VM size."
       },
       "allowedValues": [
         "Standard_B2ms",
@@ -261,28 +261,28 @@
     "createdBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for CreatedBy. Identifies who deployed this Landing Zone."
+        "description": "CreatedBy tag."
       },
       "defaultValue": "Espria"
     },
     "managedBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for ManagedBy. Identifies the managing party."
+        "description": "ManagedBy tag."
       },
       "defaultValue": "Espria"
     },
     "alertEmailAddress": {
       "type": "string",
       "metadata": {
-        "description": "Email address for Azure Monitor Action Group alerts (Espria NOC)."
+        "description": "Azure Monitor alert email."
       },
       "defaultValue": "alerts@espria.com"
     },
     "lawRetentionDays": {
       "type": "int",
       "metadata": {
-        "description": "Log Analytics Workspace retention in days."
+        "description": "Log Analytics retention days."
       },
       "defaultValue": 90,
       "minValue": 30,
@@ -291,21 +291,21 @@
     "enableVmBackup": {
       "type": "bool",
       "metadata": {
-        "description": "Enable Azure Backup Enhanced Policy V2 for DC VMs and the Management VM."
+        "description": "Azure Backup Enhanced Policy V2 for VMs."
       },
       "defaultValue": true
     },
     "enableAsrMgmtVm": {
       "type": "bool",
       "metadata": {
-        "description": "Enable Azure Site Recovery A2A replication for the Management VM (primary to secondary)."
+        "description": "ASR A2A for Management VM."
       },
       "defaultValue": true
     },
     "sophosVmSize": {
       "type": "string",
       "metadata": {
-        "description": "Sophos XG NVA VM size. Must be from the approved D-series or F-series list."
+        "description": "Sophos XG VM size."
       },
       "allowedValues": [
         "Standard_D2s_v5",
@@ -323,14 +323,14 @@
     "sophosImageVersion": {
       "type": "string",
       "metadata": {
-        "description": "Sophos XG Marketplace image version. Use \"latest\" or a specific version string."
+        "description": "Sophos XG image version."
       },
       "defaultValue": "latest"
     },
     "enableNvaDiskBackup": {
       "type": "bool",
       "metadata": {
-        "description": "Enable Azure Disk Backup (Backup Vault) for the Sophos XG NVA OS disk."
+        "description": "Azure Disk Backup for Sophos XG NVA OS disk."
       },
       "defaultValue": true
     }
@@ -496,9 +496,9 @@
           },
           "resources": [],
           "outputs": {
-            "deploymentNote": {
+            "note": {
               "type": "string",
-              "value": "[concat(\"Espria Azure Landing Zone (sophos-nva) \u2013 full deployment is managed via Bicep. This ARM wrapper provisions the parameter surface for the Deploy-to-Azure portal experience. Run az deployment sub create with variants/sophos-nva/main.bicep for the complete deployment.\")]"
+              "value": "[concat(\"Espria LZ (sophos-nva) \u2013 deploy via variants/sophos-nva/main.bicep for full infrastructure\")]"
             }
           }
         }
@@ -510,11 +510,11 @@
       "type": "string",
       "value": "sophos-nva"
     },
-    "primaryRegionDeployed": {
+    "primaryRegion": {
       "type": "string",
       "value": "[parameters('primaryRegion')]"
     },
-    "customerDeployed": {
+    "customer": {
       "type": "string",
       "value": "[parameters('customerName')]"
     }
