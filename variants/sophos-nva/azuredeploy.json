@@ -498,7 +498,7 @@
           "outputs": {
             "note": {
               "type": "string",
-              "value": "[concat(\"Espria LZ (sophos-nva) \u2013 deploy via variants/sophos-nva/main.bicep for full infrastructure\")]"
+              "value": "Espria Azure Landing Zone (sophos-nva) \u2013 full deployment managed via Bicep. Run: az deployment sub create --template-file variants/sophos-nva/main.bicep"
             }
           }
         }

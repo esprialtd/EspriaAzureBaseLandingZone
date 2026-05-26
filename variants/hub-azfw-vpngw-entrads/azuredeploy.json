@@ -558,7 +558,7 @@
           "outputs": {
             "note": {
               "type": "string",
-              "value": "[concat(\"Espria LZ (hub-azfw-vpngw-entrads) \u2013 deploy via variants/hub-azfw-vpngw-entrads/main.bicep for full infrastructure\")]"
+              "value": "Espria Azure Landing Zone (hub-azfw-vpngw-entrads) \u2013 full deployment managed via Bicep. Run: az deployment sub create --template-file variants/hub-azfw-vpngw-entrads/main.bicep"
             }
           }
         }
