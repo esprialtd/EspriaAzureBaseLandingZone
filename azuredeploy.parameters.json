@@ -3,19 +3,19 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "customerName": {
-      "value": "Contoso Ltd"
+      "value": ""
     },
     "customerAbbreviation": {
-      "value": "CON"
+      "value": ""
     },
     "customerDomainName": {
-      "value": "contoso.local"
+      "value": ""
     },
     "primaryRegion": {
       "value": "uksouth"
     },
     "secondaryRegion": {
-      "value": "ukwest"
+      "value": "auto"
     },
     "deploySecondaryRegion": {
       "value": true
@@ -42,12 +42,7 @@
       "value": "espria-admin"
     },
     "adminPassword": {
-      "reference": {
-        "keyVault": {
-          "id": "/subscriptions/<SUBSCRIPTION_ID>/resourceGroups/<KV_RG>/providers/Microsoft.KeyVault/vaults/<KV_NAME>"
-        },
-        "secretName": "lz-admin-password"
-      }
+      "value": ""
     },
     "dcVmSize": {
       "value": "Standard_D2s_v5"
@@ -60,27 +55,6 @@
     },
     "managedBy": {
       "value": "Espria"
-    },
-    "tagLocationPrimary": {
-      "value": "UK South"
-    },
-    "tagLocationSecondary": {
-      "value": "UK West"
-    },
-    "enableVmBackup": {
-      "value": true
-    },
-    "enableNvaDiskBackup": {
-      "value": true
-    },
-    "enableAsrMgmtVm": {
-      "value": true
-    },
-    "alertEmailAddress": {
-      "value": "alerts@espria.com"
-    },
-    "lawRetentionDays": {
-      "value": 90
     }
   }
 }

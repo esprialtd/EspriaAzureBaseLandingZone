@@ -1,52 +1,335 @@
+# =============================================================================
+# Espria Azure Base Landing Zone – Azure DevOps Pipeline
+# =============================================================================
+# Stages:
+#   1. Validate      – bicep lint + what-if preview
+#   2. ManagementGroups – tenant-scope MG deployment
+#   3. LandingZone   – subscription-scope LZ deployment
+#
+# Required pipeline variables / variable groups:
+#   Variable Group: 'lz-deployment-secrets'
+#     AZURE_SUBSCRIPTION_ID   – target subscription
+#     KV_RESOURCE_GROUP       – Key Vault RG (for admin password reference)
+#     KV_NAME                 – Key Vault name
+#     ADMIN_PASSWORD          – stored as secret variable
+#
+#   Pipeline variables (set per run or in pipeline YAML):
+#     CUSTOMER_NAME
+#     CUSTOMER_ABBR
+#     CUSTOMER_DOMAIN
+#     PRIMARY_REGION          (default: uksouth)
+#     SECONDARY_REGION        (default: ukwest)
+#     DEPLOY_SECONDARY        (default: true)
+#     ENVIRONMENT             (default: prod)
+#
+# Service Connections required:
+#   'sc-espria-lz-tenant'       – Tenant scope (MG creation requires Owner/MG Contributor)
+#   'sc-espria-lz-subscription' – Subscription scope
+# =============================================================================
+
 trigger:
   branches:
     include:
       - main
+  paths:
+    include:
+      - '**/*.bicep'
+      - 'main.parameters.json'
+      - 'azure-pipelines.yaml'
 
-pool:
-  vmImage: 'ubuntu-latest'
+pr:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - '**/*.bicep'
 
 variables:
-  location: 'uksouth'
-  deploymentName: 'landingZoneDeployment'
-  bicepFile: 'main.bicep'
-  parametersFile: 'main.parameters.json'
+  - group: lz-deployment-secrets
+  - name: LOCATION
+    value: 'uksouth'
+  - name: DEPLOYMENT_NAME
+    value: 'espria-base-lz'
+  - name: BICEP_FILE
+    value: 'main.bicep'
+  - name: PARAMS_FILE
+    value: 'main.parameters.json'
+  # Defaults – override at queue time
+  - name: PRIMARY_REGION
+    value: 'uksouth'
+  - name: SECONDARY_REGION
+    value: 'ukwest'
+  - name: DEPLOY_SECONDARY
+    value: 'true'
+  - name: ENVIRONMENT
+    value: 'prod'
 
 stages:
-- stage: DeployLandingZone
-  jobs:
-  - job: DeployCore
-    displayName: 'Deploy to Core Subscription'
-    steps:
-    - checkout: self
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: 'AzureCoreServiceConnection'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az bicep build main.bicep --out main.json \
-          az deployment sub create \
-            --name '${{ variables.deploymentName }}-core' \
-            --location ${{ variables.location }} \
-            --template-file ./main.json \ 
-            --parameters ./main.parameters.json \
-            --parameters coreSubscriptionId=$(az account show --query id -o tsv)
 
-  - job: DeployShared
-    displayName: 'Deploy to Shared Subscription'
-    dependsOn: DeployCore
+# ---------------------------------------------------------------------------
+# STAGE 1 – Validate & What-If
+# ---------------------------------------------------------------------------
+- stage: Validate
+  displayName: '🔍 Validate & What-If'
+  jobs:
+  - job: BicepValidate
+    displayName: 'Bicep Lint & Build'
+    pool:
+      vmImage: 'ubuntu-latest'
     steps:
+
     - checkout: self
+
     - task: AzureCLI@2
+      displayName: 'Install Bicep & Lint'
       inputs:
-        azureSubscription: 'AzureSharedServiceConnection'
+        azureSubscription: 'sc-espria-lz-subscription'
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          az deployment sub create \
-            --name '${{ variables.deploymentName }}-shared' \
-            --location ${{ variables.location }} \
-            --template-file ${{ variables.bicepFile }} \
-            --parameters @$${{ variables.parametersFile }} \
-            --parameters sharedSubscriptionId=$(az account show --query id -o tsv)
+          az bicep install
+          echo "--- Bicep version ---"
+          az bicep version
+          echo "--- Linting main.bicep ---"
+          az bicep lint --file $(BICEP_FILE)
+          echo "--- Building ARM template ---"
+          az bicep build --file $(BICEP_FILE)
+
+    - task: AzureCLI@2
+      displayName: 'What-If Preview'
+      inputs:
+        azureSubscription: 'sc-espria-lz-subscription'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          az deployment sub what-if \
+            --name "$(DEPLOYMENT_NAME)-whatif" \
+            --location "$(LOCATION)" \
+            --template-file "$(BICEP_FILE)" \
+            --parameters "@$(PARAMS_FILE)" \
+            --parameters \
+              customerName="$(CUSTOMER_NAME)" \
+              customerAbbreviation="$(CUSTOMER_ABBR)" \
+              customerDomainName="$(CUSTOMER_DOMAIN)" \
+              primaryRegion="$(PRIMARY_REGION)" \
+              secondaryRegion="$(SECONDARY_REGION)" \
+              deploySecondaryRegion="$(DEPLOY_SECONDARY)" \
+              environment="$(ENVIRONMENT)" \
+              adminUsername="espria-admin" \
+              adminPassword="$(ADMIN_PASSWORD)" \
+            --result-format ResourceIdOnly \
+            --no-pretty-print 2>&1 | tee whatif-output.txt
+          echo "##vso[task.setvariable variable=WHATIF_SUMMARY;isOutput=true]$(cat whatif-output.txt | tail -5)"
+
+    - publish: whatif-output.txt
+      artifact: WhatIfOutput
+      displayName: 'Publish What-If Output'
+
+# ---------------------------------------------------------------------------
+# STAGE 2 – Management Groups (tenant scope)
+# ---------------------------------------------------------------------------
+- stage: ManagementGroups
+  displayName: '🏗️ Management Groups'
+  dependsOn: Validate
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployMgmtGroups
+    displayName: 'Deploy Management Group Hierarchy'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'lz-management-groups'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Management Groups'
+            inputs:
+              azureSubscription: 'sc-espria-lz-tenant'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az bicep install
+                az deployment tenant create \
+                  --name "$(DEPLOYMENT_NAME)-mgmtgroups-$(Build.BuildId)" \
+                  --location "$(LOCATION)" \
+                  --template-file "modules/governance/managementGroups.bicep" \
+                  --parameters \
+                    customerName="$(CUSTOMER_NAME)" \
+                    customerAbbreviation="$(CUSTOMER_ABBR)" \
+                  --confirm-with-what-if
+
+# ---------------------------------------------------------------------------
+# STAGE 3 – Landing Zone Deployment
+# ---------------------------------------------------------------------------
+- stage: LandingZone
+  displayName: '🚀 Deploy Landing Zone'
+  dependsOn: ManagementGroups
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - deployment: DeployLZ
+    displayName: 'Deploy Core Landing Zone'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'lz-production'
+    strategy:
+      runOnce:
+        preDeploy:
+          steps:
+          - script: |
+              echo "Deploying Landing Zone for customer: $(CUSTOMER_NAME)"
+              echo "Primary Region  : $(PRIMARY_REGION)"
+              echo "Secondary Region: $(SECONDARY_REGION)"
+              echo "Environment     : $(ENVIRONMENT)"
+            displayName: 'Deployment Summary'
+
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: 'Accept Sophos Marketplace Terms'
+            inputs:
+              azureSubscription: 'sc-espria-lz-subscription'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az vm image terms accept \
+                  --publisher sophos \
+                  --offer sophos-xg \
+                  --plan byol \
+                  --subscription "$(AZURE_SUBSCRIPTION_ID)" || echo "Terms already accepted"
+
+          - task: AzureCLI@2
+            displayName: 'Deploy Landing Zone Bicep'
+            inputs:
+              azureSubscription: 'sc-espria-lz-subscription'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az bicep install
+
+                az deployment sub create \
+                  --name "$(DEPLOYMENT_NAME)-lz-$(Build.BuildId)" \
+                  --location "$(LOCATION)" \
+                  --subscription "$(AZURE_SUBSCRIPTION_ID)" \
+                  --template-file "$(BICEP_FILE)" \
+                  --parameters "@$(PARAMS_FILE)" \
+                  --parameters \
+                    customerName="$(CUSTOMER_NAME)" \
+                    customerAbbreviation="$(CUSTOMER_ABBR)" \
+                    customerDomainName="$(CUSTOMER_DOMAIN)" \
+                    primaryRegion="$(PRIMARY_REGION)" \
+                    secondaryRegion="$(SECONDARY_REGION)" \
+                    deploySecondaryRegion="$(DEPLOY_SECONDARY)" \
+                    environment="$(ENVIRONMENT)" \
+                    adminUsername="espria-admin" \
+                    adminPassword="$(ADMIN_PASSWORD)" \
+                  --output json | tee deployment-output.json
+
+                # Extract and display key outputs
+                echo "=== Deployment Outputs ==="
+                cat deployment-output.json | python3 -c "
+                import sys, json
+                d = json.load(sys.stdin)
+                props = d.get('properties', {}).get('outputs', {})
+                for k, v in props.items():
+                    print(f'{k}: {v.get(\"value\", \"\")}')
+                "
+
+          - publish: deployment-output.json
+            artifact: DeploymentOutputs
+            displayName: 'Publish Deployment Outputs'
+
+        routeTraffic:
+          steps:
+          - script: echo "Landing Zone deployment complete."
+            displayName: 'Deployment Complete'
+
+# ---------------------------------------------------------------------------
+# STAGE 4 – Post-Deploy Verification (smoke tests)
+# ---------------------------------------------------------------------------
+- stage: Verify
+  displayName: '✅ Verify Deployment'
+  dependsOn: LandingZone
+  condition: succeeded()
+  jobs:
+  - job: SmokeTests
+    displayName: 'Resource Smoke Tests'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      displayName: 'Verify Core Resource Groups Exist'
+      inputs:
+        azureSubscription: 'sc-espria-lz-subscription'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          CUSTABBR=$(echo "$(CUSTOMER_ABBR)" | tr '[:lower:]' '[:upper:]')
+          ENV="$(ENVIRONMENT)"
+          PRI_REGION="$(PRIMARY_REGION)"
+
+          RG_CONN="rg-${ENV}-core-connectivity-${CUSTABBR}-${PRI_REGION}-01"
+          RG_IDENT="rg-${ENV}-core-identity-${CUSTABBR}-${PRI_REGION}-01"
+          RG_MGMT="rg-${ENV}-core-management-${CUSTABBR}-${PRI_REGION}-01"
+
+          for RG in "$RG_CONN" "$RG_IDENT" "$RG_MGMT"; do
+            STATE=$(az group show --name "$RG" --query properties.provisioningState -o tsv 2>/dev/null)
+            if [ "$STATE" == "Succeeded" ]; then
+              echo "✅ $RG – OK"
+            else
+              echo "❌ $RG – NOT FOUND or state: $STATE"
+              exit 1
+            fi
+          done
+
+    - task: AzureCLI@2
+      displayName: 'Verify Hub VNets'
+      inputs:
+        azureSubscription: 'sc-espria-lz-subscription'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          CUSTABBR=$(echo "$(CUSTOMER_ABBR)" | tr '[:lower:]' '[:upper:]')
+          ENV="$(ENVIRONMENT)"
+          PRI_REGION="$(PRIMARY_REGION)"
+
+          VNET="vnet-${ENV}-core-connectivity-${CUSTABBR}-${PRI_REGION}-01"
+          RG="rg-${ENV}-core-connectivity-${CUSTABBR}-${PRI_REGION}-01"
+
+          STATE=$(az network vnet show --name "$VNET" --resource-group "$RG" \
+            --query provisioningState -o tsv 2>/dev/null)
+          if [ "$STATE" == "Succeeded" ]; then
+            echo "✅ Hub VNet $VNET – OK"
+          else
+            echo "❌ Hub VNet not found"
+            exit 1
+          fi
+
+    - task: AzureCLI@2
+      displayName: 'Verify DC VMs Running'
+      inputs:
+        azureSubscription: 'sc-espria-lz-subscription'
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+          CUSTABBR=$(echo "$(CUSTOMER_ABBR)" | tr '[:lower:]' '[:upper:]')
+          ENV="$(ENVIRONMENT)"
+          PRI_REGION="$(PRIMARY_REGION)"
+          REG_ABBR=$(echo "$PRI_REGION" | sed 's/uksouth/UKS/;s/ukwest/UKW/;s/northeurope/NEU/;s/westeurope/WEU/')
+
+          RG="rg-${ENV}-core-identity-${CUSTABBR}-${PRI_REGION}-01"
+          for i in 1 2; do
+            VM="${CUSTABBR}-AZ${REG_ABBR}-DC0${i}"
+            STATE=$(az vm show --name "$VM" --resource-group "$RG" \
+              --query provisioningState -o tsv 2>/dev/null)
+            if [ "$STATE" == "Succeeded" ]; then
+              echo "✅ $VM – OK"
+            else
+              echo "⚠️  $VM – state: $STATE (may still be provisioning)"
+            fi
+          done

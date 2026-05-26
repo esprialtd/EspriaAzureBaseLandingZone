@@ -1,551 +1,936 @@
-// Starter Bicep Landing Zone Structure
-// ------------------------------------
-// main.bicep - Root orchestration for cross-subscription base landing zone
-
-
-@description('Customer abbreviation 3 character (e.g., ESP)')
-param customerAbbreviation string
-
-@description('Customer abbreviation (e.g., ESP)')
-param customerAbbreviationLower string = toLower(take(customerAbbreviation,3))
-
-@description('Customer name (e.g., Espria Ltd)')
-param customerName string = 'Espria Ltd'
-
-@description('Customer domain name (e.g., espria.co.uk)')
-  param customerDomainName string = 'espria.co.uk'
-
-@description('Azure region (e.g., uksouth, ukwest)')
-@allowed([
-  'uksouth'
-  'ukwest'
-  'northeurope'
-  'westeurope'
-])
-param region string = 'uksouth'
-
-@description('Location for deployments')
-param location string = region
-
-@description('Region short name (e.g., UKS, UKW, NEU, WEU)')
-param regionAbbreviation string = toUpper(take(region, 3))
-
-@description('Region short name (e.g., uks, ukw, neu, weu)')
-param regionAbbreviationLower string = toLower(take(region, 3))
-
-@description('Environment (e.g., prod, dev, uat)')
-@allowed([
-  'prod'
-  'dev'
-  'uat'
-])
-param environment string = 'prod'
-
-@description('Core services subscription ID')
-param coreSubscriptionId string
-
-@description('Shared services subscription ID')
-param sharedSubscriptionId string
-
-@description('CreatedBy tag value')
-param createdBy string = 'Espria Ltd'
-
-@description('ManagedBy tag value')
-param managedBy string = 'Espria Ltd'
-
-@description('Location tag value')
-param tagLocation string = 'UK South'
-
-@description('Admin username for VMs')
-param adminUsername string
-
-@secure()
-@description('Admin password for VMs')
-param adminPassword string
-
-@description('On-premises address prefix (e.g., 10.1.0.0/16)')
-param onPremAddressPrefix string = '10.1.0.0/16'
-
-
-// Network Variables
-
-var addressPrefixes = {
-  coreConnectivity: '10.101.0.0/21'
-  coreIdentity: '10.101.8.0/22'
-  coreManagement: '10.101.248.0/21'
-  sharedServices: '10.101.16.0/21'
-}
-
-var vnetNameCoreConnectivity = 'vnet-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
-var vnetNameCoreIdentity = 'vnet-${environment}-core-identity-${customerAbbreviation}-${region}-01'
-var vnetNameCoreManagement = 'vnet-${environment}-core-management-${customerAbbreviation}-${region}-01'
-var vnetNameSharedServices = 'vnet-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
+// =============================================================================
+// Espria Azure Base Landing Zone - Main Orchestration
+// =============================================================================
+// Deployment model : Single Subscription, Multi-Region Hub-Spoke
+// NVA              : Sophos XG (primary + secondary regions)
+// Identity         : IaaS Domain Controllers (2x primary, 1x secondary)
+// Hub-to-Hub       : Core Connectivity VNets peered across regions
+// Aligns with      : CAF, WAF (Reliability, Security, Operational Excellence)
+// =============================================================================
 
 targetScope = 'subscription'
 
-// Core Resource Groups
-module coreResourceGroups 'modules/coreResourceGroups.bicep' = {
-  name: 'coreResourceGroups'
-  scope: subscription(coreSubscriptionId)
+// ---------------------------------------------------------------------------
+// Customer Identity Parameters
+// ---------------------------------------------------------------------------
+@description('Customer full name (e.g., Contoso Ltd)')
+param customerName string
+
+@description('3–5 character customer abbreviation used in resource names (e.g., CON)')
+@maxLength(5)
+param customerAbbreviation string
+
+@description('Customer Active Directory domain name (e.g., contoso.local)')
+param customerDomainName string
+
+// ---------------------------------------------------------------------------
+// Region Parameters
+// All Azure public regions are supported. Defaults to UK South / UK West.
+// If secondaryRegion is left as 'auto', it is derived from the Microsoft
+// region-pair documented map below.
+// ---------------------------------------------------------------------------
+@description('Primary Azure region for the Landing Zone')
+@allowed([
+  'australiacentral'
+  'australiacentral2'
+  'australiaeast'
+  'australiasoutheast'
+  'brazilsouth'
+  'brazilsoutheast'
+  'canadacentral'
+  'canadaeast'
+  'centralindia'
+  'centralus'
+  'eastasia'
+  'eastus'
+  'eastus2'
+  'francecentral'
+  'francesouth'
+  'germanynorth'
+  'germanywestcentral'
+  'israelcentral'
+  'italynorth'
+  'japaneast'
+  'japanwest'
+  'jioindiacentral'
+  'jioindiawest'
+  'koreacentral'
+  'koreasouth'
+  'mexicocentral'
+  'newzealandnorth'
+  'northcentralus'
+  'northeurope'
+  'norwayeast'
+  'norwaywest'
+  'polandcentral'
+  'qatarcentral'
+  'southafricanorth'
+  'southafricawest'
+  'southcentralus'
+  'southeastasia'
+  'southindia'
+  'spaincentral'
+  'swedencentral'
+  'swedensouth'
+  'switzerlandnorth'
+  'switzerlandwest'
+  'uaecentral'
+  'uaenorth'
+  'uksouth'
+  'ukwest'
+  'westcentralus'
+  'westeurope'
+  'westindia'
+  'westus'
+  'westus2'
+  'westus3'
+])
+param primaryRegion string = 'uksouth'
+
+@description('Secondary Azure region. Set to "auto" to automatically select the Microsoft-documented paired region for the primary.')
+@allowed([
+  'auto'
+  'australiacentral'
+  'australiacentral2'
+  'australiaeast'
+  'australiasoutheast'
+  'brazilsouth'
+  'brazilsoutheast'
+  'canadacentral'
+  'canadaeast'
+  'centralindia'
+  'centralus'
+  'eastasia'
+  'eastus'
+  'eastus2'
+  'francecentral'
+  'francesouth'
+  'germanynorth'
+  'germanywestcentral'
+  'israelcentral'
+  'italynorth'
+  'japaneast'
+  'japanwest'
+  'jioindiacentral'
+  'jioindiawest'
+  'koreacentral'
+  'koreasouth'
+  'mexicocentral'
+  'newzealandnorth'
+  'northcentralus'
+  'northeurope'
+  'norwayeast'
+  'norwaywest'
+  'polandcentral'
+  'qatarcentral'
+  'southafricanorth'
+  'southafricawest'
+  'southcentralus'
+  'southeastasia'
+  'southindia'
+  'spaincentral'
+  'swedencentral'
+  'swedensouth'
+  'switzerlandnorth'
+  'switzerlandwest'
+  'uaecentral'
+  'uaenorth'
+  'uksouth'
+  'ukwest'
+  'westcentralus'
+  'westeurope'
+  'westindia'
+  'westus'
+  'westus2'
+  'westus3'
+])
+param secondaryRegion string = 'auto'
+
+@description('Deploy resources into the secondary region. Set to false for primary-only deployments.')
+param deploySecondaryRegion bool = true
+
+// ---------------------------------------------------------------------------
+// Environment
+// ---------------------------------------------------------------------------
+@description('Deployment environment')
+@allowed(['prod', 'dev', 'uat'])
+param environment string = 'prod'
+
+// ---------------------------------------------------------------------------
+// Networking
+// ---------------------------------------------------------------------------
+@description('Primary region site ID (101–199 for production). Used as 2nd octet of 10.x.0.0/16 per Espria networking standards.')
+@minValue(101)
+@maxValue(199)
+param primaryRegionSiteId int = 101
+
+@description('Secondary region site ID (101–199 for production). Used as 2nd octet of 10.x.0.0/16 per Espria networking standards.')
+@minValue(101)
+@maxValue(199)
+param secondaryRegionSiteId int = 102
+
+@description('On-premises address prefix used in spoke UDRs (e.g., 10.1.0.0/16)')
+param onPremAddressPrefix string = '10.1.0.0/16'
+
+// ---------------------------------------------------------------------------
+// Sophos XG NVA Parameters
+// ---------------------------------------------------------------------------
+@description('Sophos XG NVA VM size')
+param sophosVmSize string = 'Standard_D2s_v5'
+
+@description('Sophos XG Marketplace image version. Use "latest" or a specific version string.')
+param sophosImageVersion string = 'latest'
+
+// ---------------------------------------------------------------------------
+// Identity / VM Parameters
+// ---------------------------------------------------------------------------
+@description('Admin username for all VMs (DCs, management VM)')
+param adminUsername string
+
+@secure()
+@description('Admin password for all VMs – must meet Azure complexity requirements (12+ chars, upper, lower, number, symbol)')
+param adminPassword string
+
+@description('Domain Controller VM size')
+param dcVmSize string = 'Standard_D2s_v5'
+
+@description('Management jump VM size')
+param mgmtVmSize string = 'Standard_B2ms'
+
+// ---------------------------------------------------------------------------
+// Tagging
+// ---------------------------------------------------------------------------
+@description('Team or individual who created this deployment')
+param createdBy string = 'Espria'
+
+@description('Team responsible for ongoing management (typically Espria managed service)')
+param managedBy string = 'Espria'
+
+// ---------------------------------------------------------------------------
+// Monitoring Parameters
+// ---------------------------------------------------------------------------
+@description('Alert notification email address for the Espria managed service NOC')
+param alertEmailAddress string = 'alerts@espria.com'
+
+@description('Log Analytics Workspace retention in days')
+@minValue(30)
+@maxValue(730)
+param lawRetentionDays int = 90
+
+// ---------------------------------------------------------------------------
+// Backup Parameters
+// ---------------------------------------------------------------------------
+@description('Enable Azure Backup for DC VMs (Recovery Services Vault, Enhanced Policy)')
+param enableVmBackup bool = true
+
+@description('Enable Azure Disk Backup for Sophos XG NVA disks (Backup Vault)')
+param enableNvaDiskBackup bool = true
+
+@description('Enable Azure Site Recovery for the Management VM (primary → secondary)')
+param enableAsrMgmtVm bool = true
+
+// ---------------------------------------------------------------------------
+// Microsoft Azure Region-Pair Map
+// Source: https://learn.microsoft.com/azure/reliability/cross-region-replication-azure
+// Used to auto-derive secondaryRegion when set to 'auto'.
+// Where a region has no standard pair (e.g. Brazil Southeast, West India),
+// a sensible geographic neighbour is used as the fallback.
+// ---------------------------------------------------------------------------
+var regionPairMap = {
+  australiacentral:    'australiacentral2'
+  australiacentral2:   'australiacentral'
+  australiaeast:       'australiasoutheast'
+  australiasoutheast:  'australiaeast'
+  brazilsouth:         'southcentralus'
+  brazilsoutheast:     'brazilsouth'
+  canadacentral:       'canadaeast'
+  canadaeast:          'canadacentral'
+  centralindia:        'southindia'
+  centralus:           'eastus2'
+  eastasia:            'southeastasia'
+  eastus:              'westus'
+  eastus2:             'centralus'
+  francecentral:       'francesouth'
+  francesouth:         'francecentral'
+  germanynorth:        'germanywestcentral'
+  germanywestcentral:  'germanynorth'
+  israelcentral:       'italynorth'
+  italynorth:          'israelcentral'
+  japaneast:           'japanwest'
+  japanwest:           'japaneast'
+  jioindiacentral:     'jioindiawest'
+  jioindiawest:        'jioindiacentral'
+  koreacentral:        'koreasouth'
+  koreasouth:          'koreacentral'
+  mexicocentral:       'southcentralus'
+  newzealandnorth:     'australiaeast'
+  northcentralus:      'southcentralus'
+  northeurope:         'westeurope'
+  norwayeast:          'norwaywest'
+  norwaywest:          'norwayeast'
+  polandcentral:       'germanywestcentral'
+  qatarcentral:        'uaenorth'
+  southafricanorth:    'southafricawest'
+  southafricawest:     'southafricanorth'
+  southcentralus:      'northcentralus'
+  southeastasia:       'eastasia'
+  southindia:          'centralindia'
+  spaincentral:        'francecentral'
+  swedencentral:       'swedensouth'
+  swedensouth:         'swedencentral'
+  switzerlandnorth:    'switzerlandwest'
+  switzerlandwest:     'switzerlandnorth'
+  uaecentral:          'uaenorth'
+  uaenorth:            'uaecentral'
+  uksouth:             'ukwest'
+  ukwest:              'uksouth'
+  westcentralus:       'westus2'
+  westeurope:          'northeurope'
+  westindia:           'southindia'
+  westus:              'eastus'
+  westus2:             'westcentralus'
+  westus3:             'eastus'
+}
+
+// Resolve secondary region: use the pair map when 'auto', otherwise use the explicit value
+var resolvedSecondaryRegion = secondaryRegion == 'auto' ? regionPairMap[primaryRegion] : secondaryRegion
+
+// ---------------------------------------------------------------------------
+// Region abbreviation map – used in resource names
+// ---------------------------------------------------------------------------
+var regionAbbrevMap = {
+  australiacentral:    'ACL'
+  australiacentral2:   'AC2'
+  australiaeast:       'AEA'
+  australiasoutheast:  'ASE'
+  brazilsouth:         'BRS'
+  brazilsoutheast:     'BSE'
+  canadacentral:       'CAC'
+  canadaeast:          'CAE'
+  centralindia:        'CIN'
+  centralus:           'CUS'
+  eastasia:            'EAP'
+  eastus:              'EUS'
+  eastus2:             'EU2'
+  francecentral:       'FRC'
+  francesouth:         'FRS'
+  germanynorth:        'GNO'
+  germanywestcentral:  'GWC'
+  israelcentral:       'ILC'
+  italynorth:          'ITN'
+  japaneast:           'JPE'
+  japanwest:           'JPW'
+  jioindiacentral:     'JIC'
+  jioindiawest:        'JIW'
+  koreacentral:        'KRC'
+  koreasouth:          'KRS'
+  mexicocentral:       'MXC'
+  newzealandnorth:     'NZN'
+  northcentralus:      'NCU'
+  northeurope:         'NEU'
+  norwayeast:          'NOE'
+  norwaywest:          'NOW'
+  polandcentral:       'POC'
+  qatarcentral:        'QAC'
+  southafricanorth:    'SAN'
+  southafricawest:     'SAW'
+  southcentralus:      'SCU'
+  southeastasia:       'SEA'
+  southindia:          'SIN'
+  spaincentral:        'SPC'
+  swedencentral:       'SWC'
+  swedensouth:         'SWS'
+  switzerlandnorth:    'CHN'
+  switzerlandwest:     'CHW'
+  uaecentral:          'UAC'
+  uaenorth:            'UAN'
+  uksouth:             'UKS'
+  ukwest:              'UKW'
+  westcentralus:       'WCU'
+  westeurope:          'WEU'
+  westindia:           'WIN'
+  westus:              'WUS'
+  westus2:             'WU2'
+  westus3:             'WU3'
+}
+
+// ---------------------------------------------------------------------------
+// Derived naming variables
+// ---------------------------------------------------------------------------
+var custAbbr   = toUpper(customerAbbreviation)
+var custAbbrLo = toLower(customerAbbreviation)
+var env        = environment
+
+var priAbbr = regionAbbrevMap[primaryRegion]
+var secAbbr = regionAbbrevMap[resolvedSecondaryRegion]
+
+// Human-readable location tags derived from region name
+var regionDisplayMap = {
+  australiacentral:    'Australia Central'
+  australiacentral2:   'Australia Central 2'
+  australiaeast:       'Australia East'
+  australiasoutheast:  'Australia Southeast'
+  brazilsouth:         'Brazil South'
+  brazilsoutheast:     'Brazil Southeast'
+  canadacentral:       'Canada Central'
+  canadaeast:          'Canada East'
+  centralindia:        'Central India'
+  centralus:           'Central US'
+  eastasia:            'East Asia'
+  eastus:              'East US'
+  eastus2:             'East US 2'
+  francecentral:       'France Central'
+  francesouth:         'France South'
+  germanynorth:        'Germany North'
+  germanywestcentral:  'Germany West Central'
+  israelcentral:       'Israel Central'
+  italynorth:          'Italy North'
+  japaneast:           'Japan East'
+  japanwest:           'Japan West'
+  jioindiacentral:     'Jio India Central'
+  jioindiawest:        'Jio India West'
+  koreacentral:        'Korea Central'
+  koreasouth:          'Korea South'
+  mexicocentral:       'Mexico Central'
+  newzealandnorth:     'New Zealand North'
+  northcentralus:      'North Central US'
+  northeurope:         'North Europe'
+  norwayeast:          'Norway East'
+  norwaywest:          'Norway West'
+  polandcentral:       'Poland Central'
+  qatarcentral:        'Qatar Central'
+  southafricanorth:    'South Africa North'
+  southafricawest:     'South Africa West'
+  southcentralus:      'South Central US'
+  southeastasia:       'Southeast Asia'
+  southindia:          'South India'
+  spaincentral:        'Spain Central'
+  swedencentral:       'Sweden Central'
+  swedensouth:         'Sweden South'
+  switzerlandnorth:    'Switzerland North'
+  switzerlandwest:     'Switzerland West'
+  uaecentral:          'UAE Central'
+  uaenorth:            'UAE North'
+  uksouth:             'UK South'
+  ukwest:              'UK West'
+  westcentralus:       'West Central US'
+  westeurope:          'West Europe'
+  westindia:           'West India'
+  westus:              'West US'
+  westus2:             'West US 2'
+  westus3:             'West US 3'
+}
+
+var tagLocationPrimary   = regionDisplayMap[primaryRegion]
+var tagLocationSecondary = regionDisplayMap[resolvedSecondaryRegion]
+
+// ---------------------------------------------------------------------------
+// Address spaces – 10.{siteId}.0.0/16 per site (Espria networking standards)
+// ---------------------------------------------------------------------------
+var priOctet = primaryRegionSiteId
+var secOctet = secondaryRegionSiteId
+
+var priConnectivityPrefix = '10.${priOctet}.0.0/21'
+var priIdentityPrefix     = '10.${priOctet}.8.0/22'
+var priManagementPrefix   = '10.${priOctet}.248.0/21'
+
+var secConnectivityPrefix = '10.${secOctet}.0.0/21'
+var secIdentityPrefix     = '10.${secOctet}.8.0/22'
+var secManagementPrefix   = '10.${secOctet}.248.0/21'
+
+// ---------------------------------------------------------------------------
+// Resource Group names (rg-{env}-{function}-{CUST}-{region}-01)
+// ---------------------------------------------------------------------------
+var rgPriConnectivity = 'rg-${env}-core-connectivity-${custAbbr}-${primaryRegion}-01'
+var rgPriIdentity     = 'rg-${env}-core-identity-${custAbbr}-${primaryRegion}-01'
+var rgPriManagement   = 'rg-${env}-core-management-${custAbbr}-${primaryRegion}-01'
+
+var rgSecConnectivity = 'rg-${env}-core-connectivity-${custAbbr}-${resolvedSecondaryRegion}-01'
+var rgSecIdentity     = 'rg-${env}-core-identity-${custAbbr}-${resolvedSecondaryRegion}-01'
+var rgSecManagement   = 'rg-${env}-core-management-${custAbbr}-${resolvedSecondaryRegion}-01'
+
+// ---------------------------------------------------------------------------
+// VNet names
+// ---------------------------------------------------------------------------
+var vnetPriConnectivity = 'vnet-${env}-core-connectivity-${custAbbr}-${primaryRegion}-01'
+var vnetPriIdentity     = 'vnet-${env}-core-identity-${custAbbr}-${primaryRegion}-01'
+var vnetPriManagement   = 'vnet-${env}-core-management-${custAbbr}-${primaryRegion}-01'
+
+var vnetSecConnectivity = 'vnet-${env}-core-connectivity-${custAbbr}-${resolvedSecondaryRegion}-01'
+var vnetSecIdentity     = 'vnet-${env}-core-identity-${custAbbr}-${resolvedSecondaryRegion}-01'
+var vnetSecManagement   = 'vnet-${env}-core-management-${custAbbr}-${resolvedSecondaryRegion}-01'
+
+// Common tags
+var commonTags = {
+  CreatedBy:   createdBy
+  ManagedBy:   managedBy
+  Environment: env
+  Customer:    customerName
+  DeployedBy:  'Espria-LZ-Bicep'
+}
+
+// ===========================================================================
+// MANAGEMENT GROUPS
+// ===========================================================================
+module managementGroups 'modules/governance/managementGroups.bicep' = {
+  name: 'deploy-managementGroups'
   params: {
-    location: location
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
+    customerName:         customerName
+    customerAbbreviation: custAbbr
   }
 }
 
-// Shared Resource Group
-module sharedResourceGroups 'modules/sharedResourceGroups.bicep' = {
-  name: 'sharedResourceGroups'
-  scope: subscription(sharedSubscriptionId)
+// ===========================================================================
+// PRIMARY REGION – RESOURCE GROUPS
+// ===========================================================================
+module rgsPrimary 'modules/governance/resourceGroups.bicep' = {
+  name: 'deploy-rgs-primary'
   params: {
-    location: location
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
+    location:             primaryRegion
+    customerAbbreviation: custAbbr
+    region:               primaryRegion
+    environment:          env
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
   }
 }
-var rgCoreConnectivity string = 'rg-${environment}-core-connectivity-${customerAbbreviation}-${region}-01'
-var rgCoreIdentity string = 'rg-${environment}-core-identity-${customerAbbreviation}-${region}-01'
-var rgCoreManagement string = 'rg-${environment}-core-management-${customerAbbreviation}-${region}-01'
-var rgSharedServices string = 'rg-${environment}-sharedservices-${customerAbbreviation}-${region}-01'
 
-// Management Groups
-// module managementGroups 'modules/managementGroups.bicep' = {
-//   name: 'managementGroups'
-//   scope: tenant()
-//   params: {
-//     customerName: customerName
-//   }
-// }
-
-// Core Connectivity Hub VNet (10.101.0.0/21)
-module connectivityCoreConnectivity 'modules/connectivity/connectivityCoreConnectivity.bicep' = {
-  name: 'connectivityCoreConnectivity'
-  scope: resourceGroup(coreSubscriptionId, rgCoreConnectivity)
-  dependsOn: [coreResourceGroups]
+// ===========================================================================
+// PRIMARY REGION – CONNECTIVITY
+// ===========================================================================
+module priConnectivity 'modules/connectivity/hubConnectivity.bicep' = {
+  name: 'deploy-pri-connectivity'
+  scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [rgsPrimary]
   params: {
-    region: region
-    environment: environment
-    associateNSGs: true
-    customerAbbreviation: customerAbbreviation
-    addressPrefix: addressPrefixes.coreConnectivity
-    vnetName: vnetNameCoreConnectivity
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    excludeFromNsg : [
-      'GatewaySubnet'
-      'AzureFirewallSubnet'
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   priAbbr
+    vnetName:             vnetPriConnectivity
+    addressPrefix:        priConnectivityPrefix
+    siteOctet:            priOctet
+    sophosVmSize:         sophosVmSize
+    sophosImageVersion:   sophosImageVersion
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    onPremAddressPrefix:  onPremAddressPrefix
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+  }
+}
+
+// ===========================================================================
+// PRIMARY REGION – IDENTITY
+// ===========================================================================
+module priIdentity 'modules/identity/identityVnet.bicep' = {
+  name: 'deploy-pri-identity'
+  scope: resourceGroup(rgPriIdentity)
+  dependsOn: [rgsPrimary, priConnectivity]
+  params: {
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   priAbbr
+    vnetName:             vnetPriIdentity
+    addressPrefix:        priIdentityPrefix
+    siteOctet:            priOctet
+    hubVnetId:            priConnectivity.outputs.hubVnetId
+    nvaPrivateIp:         priConnectivity.outputs.nvaLanPrivateIp
+    onPremAddressPrefix:  onPremAddressPrefix
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    dcCount:              2
+    dcVmSize:             dcVmSize
+    customerDomainName:   customerDomainName
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+  }
+}
+
+// ===========================================================================
+// PRIMARY REGION – MANAGEMENT
+// ===========================================================================
+module priManagement 'modules/management/managementVnet.bicep' = {
+  name: 'deploy-pri-management'
+  scope: resourceGroup(rgPriManagement)
+  dependsOn: [rgsPrimary, priConnectivity]
+  params: {
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   priAbbr
+    vnetName:             vnetPriManagement
+    addressPrefix:        priManagementPrefix
+    siteOctet:            priOctet
+    hubVnetId:            priConnectivity.outputs.hubVnetId
+    bastionSubnetId:      priConnectivity.outputs.bastionSubnetId
+    nvaPrivateIp:         priConnectivity.outputs.nvaLanPrivateIp
+    onPremAddressPrefix:  onPremAddressPrefix
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    mgmtVmSize:           mgmtVmSize
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+  }
+}
+
+// ===========================================================================
+// SECONDARY REGION
+// ===========================================================================
+module rgsSecondary 'modules/governance/resourceGroups.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-rgs-secondary'
+  params: {
+    location:             resolvedSecondaryRegion
+    customerAbbreviation: custAbbr
+    region:               resolvedSecondaryRegion
+    environment:          env
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+  }
+}
+
+module secConnectivity 'modules/connectivity/hubConnectivity.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-sec-connectivity'
+  scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [rgsSecondary]
+  params: {
+    location:             resolvedSecondaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   secAbbr
+    vnetName:             vnetSecConnectivity
+    addressPrefix:        secConnectivityPrefix
+    siteOctet:            secOctet
+    sophosVmSize:         sophosVmSize
+    sophosImageVersion:   sophosImageVersion
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    onPremAddressPrefix:  onPremAddressPrefix
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+  }
+}
+
+module secIdentity 'modules/identity/identityVnet.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-sec-identity'
+  scope: resourceGroup(rgSecIdentity)
+  dependsOn: [rgsSecondary, secConnectivity]
+  params: {
+    location:             resolvedSecondaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   secAbbr
+    vnetName:             vnetSecIdentity
+    addressPrefix:        secIdentityPrefix
+    siteOctet:            secOctet
+    hubVnetId:            deploySecondaryRegion ? secConnectivity.outputs.hubVnetId : ''
+    nvaPrivateIp:         deploySecondaryRegion ? secConnectivity.outputs.nvaLanPrivateIp : ''
+    onPremAddressPrefix:  onPremAddressPrefix
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    dcCount:              1
+    dcVmSize:             dcVmSize
+    customerDomainName:   customerDomainName
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+  }
+}
+
+module secManagement 'modules/management/managementVnet.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-sec-management'
+  scope: resourceGroup(rgSecManagement)
+  dependsOn: [rgsSecondary, secConnectivity]
+  params: {
+    location:             resolvedSecondaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    regionAbbreviation:   secAbbr
+    vnetName:             vnetSecManagement
+    addressPrefix:        secManagementPrefix
+    siteOctet:            secOctet
+    hubVnetId:            deploySecondaryRegion ? secConnectivity.outputs.hubVnetId : ''
+    bastionSubnetId:      deploySecondaryRegion ? secConnectivity.outputs.bastionSubnetId : ''
+    nvaPrivateIp:         deploySecondaryRegion ? secConnectivity.outputs.nvaLanPrivateIp : ''
+    onPremAddressPrefix:  onPremAddressPrefix
+    adminUsername:        adminUsername
+    adminPassword:        adminPassword
+    mgmtVmSize:           mgmtVmSize
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+  }
+}
+
+// ===========================================================================
+// HUB → SPOKE RETURN PEERINGS
+// ===========================================================================
+module priHubToIdentity 'modules/connectivity/spokeToHubPeering.bicep' = {
+  name: 'deploy-pri-hub-to-identity'
+  scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [priConnectivity, priIdentity]
+  params: {
+    hubVnetName:           vnetPriConnectivity
+    spokeVnetId:           priIdentity.outputs.identityVnetId
+    spokeLabel:            'identity'
+    allowForwardedTraffic: true
+  }
+}
+
+module priHubToManagement 'modules/connectivity/spokeToHubPeering.bicep' = {
+  name: 'deploy-pri-hub-to-management'
+  scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [priConnectivity, priManagement]
+  params: {
+    hubVnetName:           vnetPriConnectivity
+    spokeVnetId:           priManagement.outputs.mgmtVnetId
+    spokeLabel:            'management'
+    allowForwardedTraffic: true
+  }
+}
+
+module secHubToIdentity 'modules/connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-sec-hub-to-identity'
+  scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [secConnectivity, secIdentity]
+  params: {
+    hubVnetName:           vnetSecConnectivity
+    spokeVnetId:           deploySecondaryRegion ? secIdentity.outputs.identityVnetId : ''
+    spokeLabel:            'identity'
+    allowForwardedTraffic: true
+  }
+}
+
+module secHubToManagement 'modules/connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-sec-hub-to-management'
+  scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [secConnectivity, secManagement]
+  params: {
+    hubVnetName:           vnetSecConnectivity
+    spokeVnetId:           deploySecondaryRegion ? secManagement.outputs.mgmtVnetId : ''
+    spokeLabel:            'management'
+    allowForwardedTraffic: true
+  }
+}
+
+// ===========================================================================
+// HUB-TO-HUB PEERING (primary ↔ secondary connectivity VNets)
+// ===========================================================================
+module hubTohubPeering 'modules/connectivity/hubToHubPeering.bicep' = if (deploySecondaryRegion) {
+  name: 'deploy-hub-to-hub-peering'
+  dependsOn: [priConnectivity, secConnectivity]
+  params: {
+    primaryRg:           rgPriConnectivity
+    secondaryRg:         rgSecConnectivity
+    primaryVnetName:     vnetPriConnectivity
+    secondaryVnetName:   vnetSecConnectivity
+    primaryVnetId:       priConnectivity.outputs.hubVnetId
+    secondaryVnetId:     deploySecondaryRegion ? secConnectivity.outputs.hubVnetId : ''
+  }
+}
+
+// ===========================================================================
+// OUTPUTS
+// ===========================================================================
+output primaryRegionResolved      string = primaryRegion
+output secondaryRegionResolved    string = resolvedSecondaryRegion
+output primaryHubVnetId           string = priConnectivity.outputs.hubVnetId
+output primaryNvaLanIp            string = priConnectivity.outputs.nvaLanPrivateIp
+output primaryNvaWanIp            string = priConnectivity.outputs.nvaWanPublicIp
+output primaryBastionId           string = priManagement.outputs.bastionId
+output primaryDcVmIds             array  = priIdentity.outputs.dcVmIds
+output secondaryHubVnetId         string = deploySecondaryRegion ? secConnectivity.outputs.hubVnetId      : 'not-deployed'
+output secondaryNvaLanIp          string = deploySecondaryRegion ? secConnectivity.outputs.nvaLanPrivateIp : 'not-deployed'
+output secondaryBastionId         string = deploySecondaryRegion ? secManagement.outputs.bastionId         : 'not-deployed'
+output secondaryDcVmIds           array  = deploySecondaryRegion ? secIdentity.outputs.dcVmIds : []
+
+// ===========================================================================
+// MONITORING – Central Log Analytics Workspace + VM Insights
+// ===========================================================================
+module monitoring 'modules/monitoring/centralMonitoring.bicep' = {
+  name: 'deploy-monitoring'
+  scope: resourceGroup(rgPriManagement)
+  dependsOn: [priManagement, priIdentity, priConnectivity]
+  params: {
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    alertEmailAddress:    alertEmailAddress
+    retentionDays:        lawRetentionDays
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+    vmInsightsVms: concat(
+      [for i in range(0, 2): {
+        id:       priIdentity.outputs.dcVmIds[i]
+        location: primaryRegion
+      }],
+      [{
+        id:       priManagement.outputs.mgmtVmId
+        location: primaryRegion
+      }]
+    )
+    vnetDiagnosticTargets: [
+      { id: priConnectivity.outputs.hubVnetId,  location: primaryRegion }
+      { id: priIdentity.outputs.identityVnetId, location: primaryRegion }
+      { id: priManagement.outputs.mgmtVnetId,   location: primaryRegion }
     ]
-    subnetConfig: [
-      {
-        name: 'GatewaySubnet'
-        addressPrefix: '10.101.0.0/26'      
-      }
-      {
-        name: 'AzureFirewallSubnet'
-        addressPrefix: '10.101.0.64/26'
-      }
-      {
-        name: 'CoreServices'
-        addressPrefix: '10.101.2.0/24'
-      }
-      {
-        name: 'PrivateEndpoint'
-        addressPrefix: '10.101.7.0/24'
-      }
-    ]
   }
 }
 
-// Core Virtual Network Gateway (Active-Active)
-module coreGateway 'modules/connectivity/vNetGateway.bicep' = {
-  name: 'coreGateway'
-  scope: resourceGroup(coreSubscriptionId, rgCoreConnectivity)
-  dependsOn: [coreResourceGroups]
+// ===========================================================================
+// GOVERNANCE – Azure Policy (Allowed Locations, Allowed SKUs, DINE Monitoring)
+// ===========================================================================
+module governancePolicies 'modules/governance/policies.bicep' = {
+  name: 'deploy-governance-policies'
+  dependsOn: [monitoring]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    gatewaySubnetId: connectivityCoreConnectivity.outputs.subnetIds.GatewaySubnet
+    environment:          env
+    customerAbbreviation: custAbbr
+    primaryRegion:        primaryRegion
+    secondaryRegion:      resolvedSecondaryRegion
+    lawResourceId:        monitoring.outputs.lawId
+    dcrResourceId:        monitoring.outputs.dcrId
   }
 }
 
-// Azure Firewall Deployment in Core Connectivity
-module coreFirewall 'modules/connectivity/azFirewall.bicep' = {
-  name: 'coreFirewall'
-  scope: resourceGroup(coreSubscriptionId, rgCoreConnectivity)
-  dependsOn: [coreResourceGroups]
+// ===========================================================================
+// BACKUP – Identity RG: RSV for DC VMs (primary)
+// ===========================================================================
+module backupIdentityPrimary 'modules/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
+  name: 'deploy-backup-identity-primary'
+  scope: resourceGroup(rgPriIdentity)
+  dependsOn: [priIdentity]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    firewallSubnetId: connectivityCoreConnectivity.outputs.subnetIds.AzureFirewallSubnet
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    region:               primaryRegion
+    resourceGroupContext: 'identity'
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+    vmBackupTargets: [for i in range(0, 2): {
+      vmId:   priIdentity.outputs.dcVmIds[i]
+      vmName: priIdentity.outputs.dcVmNames[i]
+      rgName: rgPriIdentity
+    }]
+    diskBackupTargets: []
   }
 }
 
-// Variables
-
-var firewallPrivateIp = coreFirewall.outputs.firewallPrivateIpAddress
-
-// Core Identity VNet (10.101.8.0/22)
-module connectivityCoreIdentity 'modules/identity/connectivityCoreIdentity.bicep' = {
-  name: 'connectivityCoreIdentity'
-  scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
-  dependsOn: [coreResourceGroups]
+// ===========================================================================
+// BACKUP – Management RG: RSV for MGMT VM (primary)
+// ===========================================================================
+module backupManagementPrimary 'modules/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
+  name: 'deploy-backup-management-primary'
+  scope: resourceGroup(rgPriManagement)
+  dependsOn: [priManagement]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    addressPrefix: addressPrefixes.coreIdentity
-    vnetName: vnetNameCoreIdentity
-    associateNSGs: true
-    attachRouteTable: true
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    onPremAddressPrefix: onPremAddressPrefix
-    firewallPrivateIpAddress: firewallPrivateIp
-    excludeFromNsg : [
-      'EntraDomainServices'
-    ]
-    subnetConfig: [
-      {
-        name: 'DomainControllers'
-        addressPrefix: '10.101.8.0/24'
-      }
-      {
-        name: 'EntraDomainServices'
-        addressPrefix: '10.101.9.0/24'
-      }
-      {
-        name: 'PrivateEndpoint'
-        addressPrefix: '10.101.11.0/24'
-      }
-    ]
-    routeTables: [
-      {
-        name: 'rt-${environment}-core-identity-${customerAbbreviation}-${region}-hub'
-        subnets: [
-          'DomainControllers'
-          'EntraDomainServices'
-          'PrivateEndpoint'
-        ]
-        routes: [
-          {
-            name: vnetNameSharedServices
-            addressPrefix: '10.101.16.0/21'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: vnetNameCoreManagement
-            addressPrefix: '10.101.248.0/21'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-OnPrem'
-            addressPrefix: onPremAddressPrefix
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-WAN'
-            addressPrefix: '0.0.0.0/0'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-        ]
-      }
-    ]
-    // Link to Core Connectivity VNet for routing
-    hubVnetId: connectivityCoreConnectivity.outputs.vnetId
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    region:               primaryRegion
+    resourceGroupContext: 'management'
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+    vmBackupTargets: [{
+      vmId:   priManagement.outputs.mgmtVmId
+      vmName: priManagement.outputs.mgmtVmName
+      rgName: rgPriManagement
+    }]
+    diskBackupTargets: []
   }
 }
 
-// Core Management VNet (10.101.248.0/21)
-module connectivityCoreManagement 'modules/management/connectivityCoreManagement.bicep' = {
-  name: 'connectivityCoreManagement'
-  scope: resourceGroup(coreSubscriptionId, rgCoreManagement)
-  dependsOn: [coreResourceGroups]
+// ===========================================================================
+// BACKUP – Connectivity RG: Backup Vault for NVA disk (primary)
+// ===========================================================================
+module backupNvaPrimary 'modules/backup/backupAndRecovery.bicep' = if (enableNvaDiskBackup) {
+  name: 'deploy-backup-nva-primary'
+  scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [priConnectivity]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    addressPrefix: addressPrefixes.coreManagement
-    vnetName: vnetNameCoreManagement
-    associateNSGs: true
-    attachRouteTable: true
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    firewallPrivateIpAddress: firewallPrivateIp
-    onPremAddressPrefix: onPremAddressPrefix
-    excludeFromNsg : [
-      'AzureBastionSubnet'
-    ]
-    subnetConfig: [
-      {
-        name: 'ManagementServers'
-        addressPrefix: '10.101.248.0/24'
-      }
-      {
-        name: 'AzureBastionSubnet'
-        addressPrefix: '10.101.249.0/27'
-      }
-      {
-        name: 'PrivateEndpoint'
-        addressPrefix: '10.101.255.0/24'
-      }
-    ]
-    routeTables: [
-      {
-        name: 'rt-${environment}-core-management-${customerAbbreviation}-${region}-hub'
-        subnets: [
-          'ManagementServers'
-          'AzureBastionSubnet'
-          'PrivateEndpoint'
-        ]
-        routes: [
-          {
-            name: vnetNameCoreIdentity
-            addressPrefix: '10.101.8.0/22'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: vnetNameSharedServices
-            addressPrefix: '10.101.16.0/21'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-OnPrem'
-            addressPrefix: onPremAddressPrefix
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-WAN'
-            addressPrefix: '0.0.0.0/0'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-      ]
-     }
-    ]
-    // Link to Core Connectivity VNet for routing
-    hubVnetId: connectivityCoreConnectivity.outputs.vnetId
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    region:               primaryRegion
+    resourceGroupContext: 'connectivity'
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
+    vmBackupTargets:   []
+    diskBackupTargets: [{ diskId: priConnectivity.outputs.nvaOsDiskId }]
   }
 }
 
-// Shared Services VNet (10.101.16.0/21)
-module connectivitySharedServices 'modules/shared/connectivitySharedServices.bicep' = {
-  name: 'sharedSconnectivitySharedServiceservices'
-  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-  dependsOn: [sharedResourceGroups]
+// ===========================================================================
+// BACKUP – Secondary region (conditional)
+// ===========================================================================
+module backupIdentitySecondary 'modules/backup/backupAndRecovery.bicep' = if (enableVmBackup && deploySecondaryRegion) {
+  name: 'deploy-backup-identity-secondary'
+  scope: resourceGroup(rgSecIdentity)
+  dependsOn: [secIdentity]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    addressPrefix: addressPrefixes.sharedServices
-    vnetName: vnetNameSharedServices
-    associateNSGs: true
-    attachRouteTable: true
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    onPremAddressPrefix: onPremAddressPrefix
-    firewallPrivateIpAddress: firewallPrivateIp
-    subnetConfig: [
-      {
-        name: 'SharedServices'
-        addressPrefix: '10.101.16.0/24'
-      }
-      {
-        name: 'PrivateEndpoint'
-        addressPrefix: '10.101.23.0/24'
-      }
-    ]
-    routeTables: [
-      {
-        name: 'rt-${environment}-sharedservices-${customerAbbreviation}-${region}-hub'
-        subnets: [
-          'SharedServices'
-          'PrivateEndpoint'
-        ]
-        routes: [
-          {
-            name: vnetNameCoreIdentity
-            addressPrefix: '10.101.8.0/22'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: vnetNameCoreManagement
-            addressPrefix: '10.101.248.0/21'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-OnPrem'
-            addressPrefix: onPremAddressPrefix
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-          {
-            name: 'To-WAN'
-            addressPrefix: '0.0.0.0/0'
-            nextHopType: 'VirtualAppliance'
-            nextHopIpAddress: firewallPrivateIp
-          }
-        ]
-     }
-    ]
-    // Link to Core Connectivity VNet for routing
-    hubVnetId: connectivityCoreConnectivity.outputs.vnetId
+    location:             resolvedSecondaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    region:               resolvedSecondaryRegion
+    resourceGroupContext: 'identity'
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+    vmBackupTargets: [{
+      vmId:   deploySecondaryRegion ? secIdentity.outputs.dcVmIds[0] : ''
+      vmName: deploySecondaryRegion ? secIdentity.outputs.dcVmNames[0] : ''
+      rgName: rgSecIdentity
+    }]
+    diskBackupTargets: []
   }
 }
 
-// Management Server VM
-module managementVm 'modules/management/managementVm.bicep' = {
-  name: 'managementVm'
-  scope: resourceGroup(coreSubscriptionId, rgCoreManagement)
-  dependsOn: [connectivityCoreManagement]
+module backupNvaSecondary 'modules/backup/backupAndRecovery.bicep' = if (enableNvaDiskBackup && deploySecondaryRegion) {
+  name: 'deploy-backup-nva-secondary'
+  scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [secConnectivity]
   params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    environment: environment
-    vnetName: vnetNameCoreManagement
-    subnetName: 'ManagementServers'
-    adminUsername: adminUsername
-    adminPassword: adminPassword
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-  }
-}
-// Domain Controller VMs
-module domainVms 'modules/identity/domainVms.bicep' = {
-  name: 'domainVms'
-  scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
-  dependsOn: [connectivityCoreIdentity]
-  params: {
-    customerAbbreviation: customerAbbreviation
-    region: region
-    regionAbbreviation: regionAbbreviation
-    vnetName: vnetNameCoreIdentity
-    subnetName: 'DomainControllers'
-    environment: environment
-    adminUsername: adminUsername
-    adminPassword: adminPassword
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-  }
-}
-// Entra Domain Services (AADDS)
-module aadds 'modules/identity/aadds.bicep' = {
-  name: 'aadds'
-  scope: resourceGroup(coreSubscriptionId, rgCoreIdentity)
-  dependsOn: [connectivityCoreIdentity]
-  params: {
-    region: region
-    domainName: customerDomainName
-    vnetName: vnetNameCoreIdentity
-    subnetName: 'EntraDomainServices'
-    environment: environment
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-  }
-}
-// Azure Files for Shared Services
-module azureFiles 'modules/shared/azureFiles.bicep' = {
-  name: 'azureFiles'
-  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-  dependsOn: [sharedResourceGroups]
-  params: {
-    region: region
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    environment: environment
-    storageAccountName: 'stfiles${environment}${customerAbbreviationLower}${regionAbbreviationLower}01'
-    fileShareName: 'sharedfiles'
-    vnetId: connectivitySharedServices.outputs.vnetId
-  }
-}
-// File Server VM
-module fileServer 'modules/shared/fileVm.bicep' = {
-  name: 'fileServer'
-  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-  dependsOn: [connectivitySharedServices]
-  params: {
-    vnetName: vnetNameSharedServices
-    subnetName: 'SharedServices'
-    adminUsername: adminUsername
-    adminPassword: adminPassword
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    location: location
-    environment: environment
-    fsnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-FS01'
+    location:             resolvedSecondaryRegion
+    environment:          env
+    customerAbbreviation: custAbbr
+    region:               resolvedSecondaryRegion
+    resourceGroupContext: 'connectivity'
+    tags:                 union(commonTags, { Location: tagLocationSecondary })
+    vmBackupTargets:   []
+    diskBackupTargets: deploySecondaryRegion ? [{ diskId: secConnectivity.outputs.nvaOsDiskId }] : []
   }
 }
 
-// Print Server VM
-module printServer 'modules/shared/printVm.bicep' = {
-  name: 'printServer'
-  scope: resourceGroup(sharedSubscriptionId, rgSharedServices)
-  dependsOn: [connectivitySharedServices]
+// ===========================================================================
+// ASR CACHE STORAGE – Primary connectivity RG (A2A staging)
+// ===========================================================================
+module asrCacheStorage 'modules/backup/asrCacheStorage.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
+  name: 'deploy-asr-cache-storage'
+  scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [priConnectivity]
   params: {
-    vnetName: vnetNameSharedServices
-    subnetName: 'SharedServices'
-    adminUsername: adminUsername
-    adminPassword: adminPassword
-    createdBy: createdBy
-    managedBy: managedBy
-    tagLocation: tagLocation
-    location: location
-    environment: environment
-    prtnamePrefix: '${customerAbbreviation}-AZ${regionAbbreviation}-PRT01'
+    location:             primaryRegion
+    environment:          env
+    customerAbbreviation: custAbbrLo
+    region:               primaryRegion
+    tags:                 union(commonTags, { Location: tagLocationPrimary })
   }
 }
 
-
-// Outputs
-output coreVNetId string = connectivityCoreConnectivity.outputs.vnetId
-output identityVNetId string = connectivityCoreIdentity.outputs.vnetId
-output managementVNetId string = connectivityCoreManagement.outputs.vnetId
-output sharedServicesVNetId string = connectivitySharedServices.outputs.vnetId
-output managementVmId string = managementVm.outputs.managementServerId
-output domainVmsIds array = domainVms.outputs.vmIds
-output aaddsId string = aadds.outputs.aaddsId
-output azureFilesId string = azureFiles.outputs.azureFilesId
-output fileServerId string = fileServer.outputs.fileServerId
-output firewallId string = coreFirewall.outputs.firewallId
-output firewallPrivateIpAddress string = coreFirewall.outputs.firewallPrivateIpAddress
-output virtualNetworkGatewayId string = coreGateway.outputs.virtualNetworkGatewayId
-output virtualNetworkGatewayPublicIpId array = coreGateway.outputs.virtualNetworkGatewayPublicIpIds
-output routeTableIds object = {
-  identity: connectivityCoreIdentity.outputs.routeTableIds
-  management: connectivityCoreManagement.outputs.routeTableIds
-  shared: connectivitySharedServices.outputs.routeTableIds
+// ===========================================================================
+// ASR REPLICATION – Management VM primary → secondary
+// ===========================================================================
+module asrMgmtVm 'modules/backup/asrReplication.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
+  name: 'deploy-asr-mgmt-vm'
+  scope: resourceGroup(rgSecManagement)
+  dependsOn: [priManagement, secManagement, asrCacheStorage]
+  params: {
+    location:               resolvedSecondaryRegion
+    environment:            env
+    customerAbbreviation:   custAbbr
+    region:                 resolvedSecondaryRegion
+    primaryRegion:          primaryRegion
+    tags:                   union(commonTags, { Location: tagLocationSecondary })
+    sourceVmId:             priManagement.outputs.mgmtVmId
+    sourceVmName:           priManagement.outputs.mgmtVmName
+    sourceVmOsDiskId:       priManagement.outputs.mgmtVmOsDiskId
+    sourceVmLocation:       primaryRegion
+    sourceMgmtVnetId:       priManagement.outputs.mgmtVnetId
+    targetMgmtVnetId:       deploySecondaryRegion ? secManagement.outputs.mgmtVnetId : ''
+    cacheStorageAccountId:  (enableAsrMgmtVm && deploySecondaryRegion) ? asrCacheStorage.outputs.storageAccountId : ''
+  }
 }
+
+// Additional outputs for new modules
+output lawId              string = monitoring.outputs.lawId
+output lawWorkspaceId     string = monitoring.outputs.lawWorkspaceId
+output actionGroupId      string = monitoring.outputs.actionGroupId
+output primaryRsvId       string = enableVmBackup ? backupManagementPrimary.outputs.rsvId : 'not-enabled'
+output primaryBuvId       string = enableNvaDiskBackup ? backupNvaPrimary.outputs.buvId : 'not-enabled'
+output asrVaultId         string = (enableAsrMgmtVm && deploySecondaryRegion) ? asrMgmtVm.outputs.rsvAsrId : 'not-enabled'

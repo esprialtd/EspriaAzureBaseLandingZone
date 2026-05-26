@@ -1,0 +1,414 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "description": "Espria Azure Base Landing Zone – Multi-region Hub-Spoke with Sophos XG NVA, IaaS Domain Controllers, Azure Bastion. Deploys Identity, Connectivity and Management resource groups and VNets per region.",
+    "_generator": {
+      "name": "espria-lz",
+      "version": "2.0.0"
+    }
+  },
+  "parameters": {
+    "customerName": {
+      "type": "string",
+      "metadata": {
+        "description": "Customer full name (e.g., Contoso Ltd). Used in Management Group display names and tags."
+      }
+    },
+    "customerAbbreviation": {
+      "type": "string",
+      "maxLength": 5,
+      "metadata": {
+        "description": "3–5 character customer abbreviation used in all resource names (e.g., CON). Uppercase recommended."
+      }
+    },
+    "customerDomainName": {
+      "type": "string",
+      "metadata": {
+        "description": "Active Directory domain name (e.g., contoso.local). Used in DC deployment tags."
+      }
+    },
+    "primaryRegion": {
+      "type": "string",
+      "defaultValue": "uksouth",
+      "allowedValues": [
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "brazilsoutheast",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "francecentral",
+        "francesouth",
+        "germanynorth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "jioindiacentral",
+        "jioindiawest",
+        "koreacentral",
+        "koreasouth",
+        "mexicocentral",
+        "newzealandnorth",
+        "northcentralus",
+        "northeurope",
+        "norwayeast",
+        "norwaywest",
+        "polandcentral",
+        "qatarcentral",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "swedensouth",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westeurope",
+        "westindia",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "metadata": {
+        "description": "Primary Azure region. Defaults to UK South. The secondary region is automatically set to the Microsoft-documented paired region when secondaryRegion is 'auto'."
+      }
+    },
+    "secondaryRegion": {
+      "type": "string",
+      "defaultValue": "auto",
+      "allowedValues": [
+        "auto",
+        "australiacentral",
+        "australiacentral2",
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "brazilsoutheast",
+        "canadacentral",
+        "canadaeast",
+        "centralindia",
+        "centralus",
+        "eastasia",
+        "eastus",
+        "eastus2",
+        "francecentral",
+        "francesouth",
+        "germanynorth",
+        "germanywestcentral",
+        "israelcentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "jioindiacentral",
+        "jioindiawest",
+        "koreacentral",
+        "koreasouth",
+        "mexicocentral",
+        "newzealandnorth",
+        "northcentralus",
+        "northeurope",
+        "norwayeast",
+        "norwaywest",
+        "polandcentral",
+        "qatarcentral",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southeastasia",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "swedensouth",
+        "switzerlandnorth",
+        "switzerlandwest",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "ukwest",
+        "westcentralus",
+        "westeurope",
+        "westindia",
+        "westus",
+        "westus2",
+        "westus3"
+      ],
+      "metadata": {
+        "description": "Secondary Azure region for DR. Leave as 'auto' to automatically use the Microsoft-documented paired region for the primary. Set explicitly to override."
+      }
+    },
+    "deploySecondaryRegion": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Set to false to deploy primary region only (no secondary hub, NVA, or DC)."
+      }
+    },
+    "environment": {
+      "type": "string",
+      "defaultValue": "prod",
+      "allowedValues": [ "prod", "dev", "uat" ],
+      "metadata": {
+        "description": "Deployment environment. Used in resource group and resource names."
+      }
+    },
+    "primaryRegionSiteId": {
+      "type": "int",
+      "defaultValue": 101,
+      "minValue": 101,
+      "maxValue": 199,
+      "metadata": {
+        "description": "2nd octet for the primary region 10.x.0.0/16 address space (Espria networking standard). Default: 101 → 10.101.0.0/16."
+      }
+    },
+    "secondaryRegionSiteId": {
+      "type": "int",
+      "defaultValue": 102,
+      "minValue": 101,
+      "maxValue": 199,
+      "metadata": {
+        "description": "2nd octet for the secondary region 10.x.0.0/16 address space. Default: 102 → 10.102.0.0/16."
+      }
+    },
+    "onPremAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.1.0.0/16",
+      "metadata": {
+        "description": "On-premises address prefix used in spoke UDRs to route traffic via the Sophos XG NVA."
+      }
+    },
+    "sophosVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_D2s_v4",
+        "Standard_D4s_v4"
+      ],
+      "metadata": {
+        "description": "VM size for the Sophos XG NVA. Standard_D2s_v5 is recommended for up to 500 users."
+      }
+    },
+    "sophosImageVersion": {
+      "type": "string",
+      "defaultValue": "latest",
+      "metadata": {
+        "description": "Sophos XG Marketplace image version. Use 'latest' or a specific version string from the Marketplace."
+      }
+    },
+    "adminUsername": {
+      "type": "string",
+      "defaultValue": "espria-admin",
+      "metadata": {
+        "description": "Local administrator username for all VMs (Domain Controllers, Management VM)."
+      }
+    },
+    "adminPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Local administrator password. Must be 12+ characters with uppercase, lowercase, number and symbol."
+      }
+    },
+    "dcVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2s_v4",
+        "Standard_D4s_v4",
+        "Standard_B4ms"
+      ],
+      "metadata": {
+        "description": "VM size for Domain Controllers."
+      }
+    },
+    "mgmtVmSize": {
+      "type": "string",
+      "defaultValue": "Standard_B2ms",
+      "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B4ms",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5"
+      ],
+      "metadata": {
+        "description": "VM size for the Management jump VM."
+      }
+    },
+    "createdBy": {
+      "type": "string",
+      "defaultValue": "Espria",
+      "metadata": {
+        "description": "CreatedBy tag – person or team responsible for this deployment."
+      }
+    },
+    "managedBy": {
+      "type": "string",
+      "defaultValue": "Espria",
+      "metadata": {
+        "description": "ManagedBy tag – team responsible for ongoing management."
+      }
+    }
+  },
+  "variables": {
+    "regionPairMap": {
+      "australiacentral":    "australiacentral2",
+      "australiacentral2":   "australiacentral",
+      "australiaeast":       "australiasoutheast",
+      "australiasoutheast":  "australiaeast",
+      "brazilsouth":         "southcentralus",
+      "brazilsoutheast":     "brazilsouth",
+      "canadacentral":       "canadaeast",
+      "canadaeast":          "canadacentral",
+      "centralindia":        "southindia",
+      "centralus":           "eastus2",
+      "eastasia":            "southeastasia",
+      "eastus":              "westus",
+      "eastus2":             "centralus",
+      "francecentral":       "francesouth",
+      "francesouth":         "francecentral",
+      "germanynorth":        "germanywestcentral",
+      "germanywestcentral":  "germanynorth",
+      "israelcentral":       "italynorth",
+      "italynorth":          "israelcentral",
+      "japaneast":           "japanwest",
+      "japanwest":           "japaneast",
+      "jioindiacentral":     "jioindiawest",
+      "jioindiawest":        "jioindiacentral",
+      "koreacentral":        "koreasouth",
+      "koreasouth":          "koreacentral",
+      "mexicocentral":       "southcentralus",
+      "newzealandnorth":     "australiaeast",
+      "northcentralus":      "southcentralus",
+      "northeurope":         "westeurope",
+      "norwayeast":          "norwaywest",
+      "norwaywest":          "norwayeast",
+      "polandcentral":       "germanywestcentral",
+      "qatarcentral":        "uaenorth",
+      "southafricanorth":    "southafricawest",
+      "southafricawest":     "southafricanorth",
+      "southcentralus":      "northcentralus",
+      "southeastasia":       "eastasia",
+      "southindia":          "centralindia",
+      "spaincentral":        "francecentral",
+      "swedencentral":       "swedensouth",
+      "swedensouth":         "swedencentral",
+      "switzerlandnorth":    "switzerlandwest",
+      "switzerlandwest":     "switzerlandnorth",
+      "uaecentral":          "uaenorth",
+      "uaenorth":            "uaecentral",
+      "uksouth":             "ukwest",
+      "ukwest":              "uksouth",
+      "westcentralus":       "westus2",
+      "westeurope":          "northeurope",
+      "westindia":           "southindia",
+      "westus":              "eastus",
+      "westus2":             "westcentralus",
+      "westus3":             "eastus"
+    },
+    "resolvedSecondaryRegion": "[if(equals(parameters('secondaryRegion'), 'auto'), variables('regionPairMap')[parameters('primaryRegion')], parameters('secondaryRegion'))]",
+    "custAbbr": "[toUpper(parameters('customerAbbreviation'))]",
+    "env": "[parameters('environment')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "[concat('espria-lz-', parameters('environment'), '-', uniqueString(subscription().id))]",
+      "location": "[parameters('primaryRegion')]",
+      "properties": {
+        "mode": "Incremental",
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "parameters": {
+          "customerName":           { "value": "[parameters('customerName')]" },
+          "customerAbbreviation":   { "value": "[parameters('customerAbbreviation')]" },
+          "customerDomainName":     { "value": "[parameters('customerDomainName')]" },
+          "primaryRegion":          { "value": "[parameters('primaryRegion')]" },
+          "secondaryRegion":        { "value": "[parameters('secondaryRegion')]" },
+          "deploySecondaryRegion":  { "value": "[parameters('deploySecondaryRegion')]" },
+          "environment":            { "value": "[parameters('environment')]" },
+          "primaryRegionSiteId":    { "value": "[parameters('primaryRegionSiteId')]" },
+          "secondaryRegionSiteId":  { "value": "[parameters('secondaryRegionSiteId')]" },
+          "onPremAddressPrefix":    { "value": "[parameters('onPremAddressPrefix')]" },
+          "sophosVmSize":           { "value": "[parameters('sophosVmSize')]" },
+          "sophosImageVersion":     { "value": "[parameters('sophosImageVersion')]" },
+          "adminUsername":          { "value": "[parameters('adminUsername')]" },
+          "adminPassword":          { "value": "[parameters('adminPassword')]" },
+          "dcVmSize":               { "value": "[parameters('dcVmSize')]" },
+          "mgmtVmSize":             { "value": "[parameters('mgmtVmSize')]" },
+          "createdBy":              { "value": "[parameters('createdBy')]" },
+          "managedBy":              { "value": "[parameters('managedBy')]" }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "parameters": {
+            "customerName":          { "type": "string" },
+            "customerAbbreviation":  { "type": "string" },
+            "customerDomainName":    { "type": "string" },
+            "primaryRegion":         { "type": "string" },
+            "secondaryRegion":       { "type": "string" },
+            "deploySecondaryRegion": { "type": "bool" },
+            "environment":           { "type": "string" },
+            "primaryRegionSiteId":   { "type": "int" },
+            "secondaryRegionSiteId": { "type": "int" },
+            "onPremAddressPrefix":   { "type": "string" },
+            "sophosVmSize":          { "type": "string" },
+            "sophosImageVersion":    { "type": "string" },
+            "adminUsername":         { "type": "string" },
+            "adminPassword":         { "type": "securestring" },
+            "dcVmSize":              { "type": "string" },
+            "mgmtVmSize":            { "type": "string" },
+            "createdBy":             { "type": "string" },
+            "managedBy":             { "type": "string" }
+          },
+          "variables": {
+            "note": "This inline template is a portal-entry shim. The actual Bicep-compiled deployment runs via the linked Bicep modules in the repository. For full deployment use the Bicep files directly via Azure CLI, Azure DevOps pipeline, or the deploy.sh script."
+          },
+          "resources": [],
+          "outputs": {
+            "deploymentNote": {
+              "type": "string",
+              "value": "Portal custom deployment completed. For module-level deployment use: az deployment sub create --template-file main.bicep"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "resolvedSecondaryRegion": {
+      "type": "string",
+      "value": "[variables('resolvedSecondaryRegion')]"
+    },
+    "primaryRegion": {
+      "type": "string",
+      "value": "[parameters('primaryRegion')]"
+    },
+    "deploymentNote": {
+      "type": "string",
+      "value": "Parameters validated. Deploy the full Landing Zone using: az deployment sub create --template-file main.bicep --parameters @azuredeploy.parameters.json"
+    }
+  }
+}
