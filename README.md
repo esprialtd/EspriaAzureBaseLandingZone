@@ -28,17 +28,17 @@ Six-variant, multi-region Azure Landing Zone for Espria-managed customers. Three
 
 | Variant | Button |
 |---|---|
-| Sophos NVA + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fsophos-nva%2Fazuredeploy.json) |
-| vWAN + Azure Firewall + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fvwan-azfw%2Fazuredeploy.json) |
-| Azure Firewall + VPN GW + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fhub-azfw-vpngw%2Fazuredeploy.json) |
+| Sophos NVA + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fsophos-nva%2Fazuredeploy.json) |
+| vWAN + Azure Firewall + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fvwan-azfw%2Fazuredeploy.json) |
+| Azure Firewall + VPN GW + AD DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fhub-azfw-vpngw%2Fazuredeploy.json) |
 
 ### Entra DS Variants
 
 | Variant | Button |
 |---|---|
-| Sophos NVA + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fsophos-nva-entrads%2Fazuredeploy.json) |
-| vWAN + Azure Firewall + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fvwan-azfw-entrads%2Fazuredeploy.json) |
-| Azure Firewall + VPN GW + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fhub-azfw-vpngw-entrads%2Fazuredeploy.json) |
+| Sophos NVA + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fsophos-nva-entrads%2Fazuredeploy.json) |
+| vWAN + Azure Firewall + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fvwan-azfw-entrads%2Fazuredeploy.json) |
+| Azure Firewall + VPN GW + Entra DS | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesprialtd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fhub-azfw-vpngw-entrads%2Fazuredeploy.json) |
 
 ### About the azuredeploy.json files
 
