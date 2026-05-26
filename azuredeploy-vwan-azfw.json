@@ -7,7 +7,7 @@
       "version": "3.0.0"
     },
     "displayName": "Espria LZ \u2013 Variant B: Azure Virtual WAN + Azure Firewall",
-    "description": "Deploys the Espria Azure Base Landing Zone using Azure Virtual WAN (Standard) with Azure Firewall Premium in secured virtual hubs. vWAN routing intent replaces spoke UDRs. Hub-to-hub transit is automatic. IaaS Active Directory Domain Controllers. Azure Backup Enhanced Policy V2. Azure Site Recovery for the Management VM."
+    "description": "Deploys the Espria Azure Base Landing Zone using Azure Virtual WAN (Standard) with Azure Firewall Premium in secured virtual hubs. The vWAN Hub uses 10.{siteId}.0.0/23 \u2014 the same address block the connectivity VNet occupies in hub-spoke variants. vWAN routing intent replaces spoke UDRs. Optional vWAN VPN Gateway. IaaS Active Directory Domain Controllers. Azure Backup Enhanced Policy V2. Azure Site Recovery for the Management VM."
   },
   "parameters": {
     "customerName": {
@@ -164,7 +164,7 @@
     "environment": {
       "type": "string",
       "metadata": {
-        "description": "Deployment environment tag."
+        "description": "Deployment environment."
       },
       "allowedValues": [
         "prod",
@@ -176,7 +176,7 @@
     "primaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Primary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Primary region site ID (101\u2013199). Sets the 2nd octet of 10.x.0.0/16. The vWAN Hub will use 10.x.0.0/23 from this block."
       },
       "defaultValue": 101,
       "minValue": 101,
@@ -185,23 +185,64 @@
     "secondaryRegionSiteId": {
       "type": "int",
       "metadata": {
-        "description": "Secondary region site ID (101\u2013199). Used as 2nd octet of 10.x.0.0/16."
+        "description": "Secondary region site ID (101\u2013199). Sets the 2nd octet of 10.x.0.0/16."
       },
       "defaultValue": 102,
       "minValue": 101,
       "maxValue": 199
     },
+    "primaryHubPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "vWAN Hub address prefix for the primary region. Leave empty to auto-derive as 10.{primaryRegionSiteId}.0.0/23. Override only if a different range is required."
+      },
+      "defaultValue": ""
+    },
+    "secondaryHubPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "vWAN Hub address prefix for the secondary region. Leave empty to auto-derive as 10.{secondaryRegionSiteId}.0.0/23."
+      },
+      "defaultValue": ""
+    },
     "onPremAddressPrefix": {
       "type": "string",
       "metadata": {
-        "description": "On-premises address prefix used in spoke UDRs (e.g. 10.1.0.0/16)."
+        "description": "On-premises address prefix used in firewall rules (e.g. 10.1.0.0/16)."
       },
       "defaultValue": "10.1.0.0/16"
+    },
+    "firewallSkuTier": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Firewall SKU tier. Premium enables IDPS and TLS inspection."
+      },
+      "allowedValues": [
+        "Premium",
+        "Standard"
+      ],
+      "defaultValue": "Premium"
+    },
+    "deployVpnGateway": {
+      "type": "bool",
+      "metadata": {
+        "description": "Deploy a vWAN VPN Gateway in each hub. Adds approximately 30 minutes to provisioning time. Uses Microsoft.Network/vpnGateways (vWAN-native type)."
+      },
+      "defaultValue": false
+    },
+    "vpnGwScaleUnit": {
+      "type": "int",
+      "metadata": {
+        "description": "vWAN VPN Gateway scale unit. 1 = 500 Mbps aggregate (active-active pair). Each additional unit adds 500 Mbps."
+      },
+      "defaultValue": 1,
+      "minValue": 1,
+      "maxValue": 20
     },
     "adminUsername": {
       "type": "string",
       "metadata": {
-        "description": "Local administrator username for all VMs."
+        "description": "Local administrator username for Domain Controller and Management VMs."
       },
       "defaultValue": "espria-admin"
     },
@@ -261,21 +302,21 @@
     "createdBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for CreatedBy. Identifies who deployed this Landing Zone."
+        "description": "Tag value for CreatedBy."
       },
       "defaultValue": "Espria"
     },
     "managedBy": {
       "type": "string",
       "metadata": {
-        "description": "Tag value for ManagedBy. Identifies the managing party."
+        "description": "Tag value for ManagedBy."
       },
       "defaultValue": "Espria"
     },
     "alertEmailAddress": {
       "type": "string",
       "metadata": {
-        "description": "Email address for Azure Monitor Action Group alerts (Espria NOC)."
+        "description": "Email address for Azure Monitor Action Group alerts."
       },
       "defaultValue": "alerts@espria.com"
     },
@@ -295,44 +336,19 @@
       },
       "defaultValue": true
     },
-    "enableAsrMgmtVm": {
-      "type": "bool",
-      "metadata": {
-        "description": "Enable Azure Site Recovery A2A replication for the Management VM (primary to secondary)."
-      },
-      "defaultValue": true
-    },
-    "primaryHubPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "vWAN Hub address prefix for the primary region. Minimum /23. Must not overlap with any spoke VNet address space."
-      },
-      "defaultValue": "10.101.128.0/23"
-    },
-    "secondaryHubPrefix": {
-      "type": "string",
-      "metadata": {
-        "description": "vWAN Hub address prefix for the secondary region. Minimum /23. Must not overlap with any spoke VNet address space."
-      },
-      "defaultValue": "10.102.128.0/23"
-    },
-    "firewallSkuTier": {
-      "type": "string",
-      "metadata": {
-        "description": "Azure Firewall SKU tier. Premium enables IDPS and TLS inspection. Standard is lower cost."
-      },
-      "allowedValues": [
-        "Premium",
-        "Standard"
-      ],
-      "defaultValue": "Premium"
-    },
     "enableNvaDiskBackup": {
       "type": "bool",
       "metadata": {
         "description": "Enable NVA disk backup. Always false for this variant \u2013 no NVA is deployed."
       },
       "defaultValue": false
+    },
+    "enableAsrMgmtVm": {
+      "type": "bool",
+      "metadata": {
+        "description": "Enable Azure Site Recovery A2A replication for the Management VM."
+      },
+      "defaultValue": true
     }
   },
   "variables": {
@@ -377,8 +393,23 @@
           "secondaryRegionSiteId": {
             "value": "[parameters('secondaryRegionSiteId')]"
           },
+          "primaryHubPrefix": {
+            "value": "[parameters('primaryHubPrefix')]"
+          },
+          "secondaryHubPrefix": {
+            "value": "[parameters('secondaryHubPrefix')]"
+          },
           "onPremAddressPrefix": {
             "value": "[parameters('onPremAddressPrefix')]"
+          },
+          "firewallSkuTier": {
+            "value": "[parameters('firewallSkuTier')]"
+          },
+          "deployVpnGateway": {
+            "value": "[parameters('deployVpnGateway')]"
+          },
+          "vpnGwScaleUnit": {
+            "value": "[parameters('vpnGwScaleUnit')]"
           },
           "adminUsername": {
             "value": "[parameters('adminUsername')]"
@@ -407,20 +438,11 @@
           "enableVmBackup": {
             "value": "[parameters('enableVmBackup')]"
           },
-          "enableAsrMgmtVm": {
-            "value": "[parameters('enableAsrMgmtVm')]"
-          },
-          "primaryHubPrefix": {
-            "value": "[parameters('primaryHubPrefix')]"
-          },
-          "secondaryHubPrefix": {
-            "value": "[parameters('secondaryHubPrefix')]"
-          },
-          "firewallSkuTier": {
-            "value": "[parameters('firewallSkuTier')]"
-          },
           "enableNvaDiskBackup": {
             "value": "[parameters('enableNvaDiskBackup')]"
+          },
+          "enableAsrMgmtVm": {
+            "value": "[parameters('enableAsrMgmtVm')]"
           }
         },
         "template": {
@@ -454,8 +476,23 @@
             "secondaryRegionSiteId": {
               "type": "int"
             },
+            "primaryHubPrefix": {
+              "type": "string"
+            },
+            "secondaryHubPrefix": {
+              "type": "string"
+            },
             "onPremAddressPrefix": {
               "type": "string"
+            },
+            "firewallSkuTier": {
+              "type": "string"
+            },
+            "deployVpnGateway": {
+              "type": "bool"
+            },
+            "vpnGwScaleUnit": {
+              "type": "int"
             },
             "adminUsername": {
               "type": "string"
@@ -484,19 +521,10 @@
             "enableVmBackup": {
               "type": "bool"
             },
-            "enableAsrMgmtVm": {
+            "enableNvaDiskBackup": {
               "type": "bool"
             },
-            "primaryHubPrefix": {
-              "type": "string"
-            },
-            "secondaryHubPrefix": {
-              "type": "string"
-            },
-            "firewallSkuTier": {
-              "type": "string"
-            },
-            "enableNvaDiskBackup": {
+            "enableAsrMgmtVm": {
               "type": "bool"
             }
           },
@@ -504,7 +532,7 @@
           "outputs": {
             "deploymentNote": {
               "type": "string",
-              "value": "[concat(\"Espria Azure Landing Zone (vwan-azfw) \u2013 full deployment is managed via Bicep. This ARM wrapper provisions the parameter surface for the Deploy-to-Azure portal experience. Run az deployment sub create with variants/vwan-azfw/main.bicep for the complete deployment.\")]"
+              "value": "[concat(\"Espria Azure Landing Zone (vwan-azfw) \u2013 full deployment managed via Bicep. Run az deployment sub create with variants/vwan-azfw/main.bicep for the complete deployment.\")]"
             }
           }
         }
@@ -516,13 +544,17 @@
       "type": "string",
       "value": "vwan-azfw"
     },
-    "primaryRegionDeployed": {
+    "primaryRegion": {
       "type": "string",
       "value": "[parameters('primaryRegion')]"
     },
     "customerDeployed": {
       "type": "string",
       "value": "[parameters('customerName')]"
+    },
+    "vpnGatewayEnabled": {
+      "type": "bool",
+      "value": "[parameters('deployVpnGateway')]"
     }
   }
 }

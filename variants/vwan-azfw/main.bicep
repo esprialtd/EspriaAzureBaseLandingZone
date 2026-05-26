@@ -88,11 +88,19 @@ param primaryRegionSiteId int = 101
 @maxValue(199)
 param secondaryRegionSiteId int = 102
 
-@description('vWAN Hub address prefix – /23 minimum, must not overlap with any spoke. Uses site 128.x range by default.')
-param primaryHubPrefix string = '10.101.128.0/23'
+@description('vWAN Hub address prefix for the primary region. Defaults to 10.{primaryRegionSiteId}.0.0/23 — the same block the connectivity VNet occupies in hub-spoke variants, since vWAN replaces that VNet. Must not overlap with spoke VNets (identity .8.0/22, management .248.0/21). Leave empty to use the auto-derived default.')
+param primaryHubPrefix string = ''
 
-@description('vWAN Hub address prefix for secondary region.')
-param secondaryHubPrefix string = '10.102.128.0/23'
+@description('vWAN Hub address prefix for the secondary region. Defaults to 10.{secondaryRegionSiteId}.0.0/23. Leave empty to use the auto-derived default.')
+param secondaryHubPrefix string = ''
+
+@description('Deploy a vWAN VPN Gateway in each hub. Adds ~30 minutes to provisioning time. Uses Microsoft.Network/vpnGateways (vWAN-native type), not a standalone VPN Gateway.')
+param deployVpnGateway bool = false
+
+@description('vWAN VPN Gateway scale unit. 1 = 500 Mbps aggregate (active-active pair).')
+@minValue(1)
+@maxValue(20)
+param vpnGwScaleUnit int = 1
 
 @description('On-premises address prefix (used in firewall rules)')
 param onPremAddressPrefix string = '10.1.0.0/16'
@@ -193,6 +201,12 @@ var priAbbr    = regionAbbrevMap[primaryRegion]
 var secAbbr    = regionAbbrevMap[resolvedSecondaryRegion]
 var priOctet   = primaryRegionSiteId
 var secOctet   = secondaryRegionSiteId
+
+// vWAN Hub prefixes: default to 10.{siteId}.0.0/23 (same block as connectivity
+// VNet in hub-spoke variants — clean reuse since vWAN replaces that VNet).
+// An explicit override can be passed via the primaryHubPrefix/secondaryHubPrefix params.
+var resolvedPrimaryHubPrefix   = empty(primaryHubPrefix)   ? '10.${priOctet}.0.0/23' : primaryHubPrefix
+var resolvedSecondaryHubPrefix = empty(secondaryHubPrefix) ? '10.${secOctet}.0.0/23' : secondaryHubPrefix
 
 // Address spaces
 var priIdentityPrefix  = '10.${priOctet}.8.0/22'
@@ -367,8 +381,10 @@ module priVwanHub './connectivity/vwanHub.bicep' = {
     customerAbbreviation: custAbbr
     regionAbbreviation: priAbbr
     vwanId:             vwan.outputs.vwanId
-    hubAddressPrefix:   primaryHubPrefix
+    hubAddressPrefix:   resolvedPrimaryHubPrefix
     firewallSkuTier:    firewallSkuTier
+    deployVpnGateway:   deployVpnGateway
+    vpnGwScaleUnit:     vpnGwScaleUnit
     identityVnetId:     priIdentitySpokeVnet.outputs.vnetId
     managementVnetId:   priManagementSpokeVnet.outputs.vnetId
     tags:               commonTags
@@ -385,8 +401,10 @@ module secVwanHub './connectivity/vwanHub.bicep' = if (deploySecondaryRegion) {
     customerAbbreviation: custAbbr
     regionAbbreviation: secAbbr
     vwanId:             vwan.outputs.vwanId
-    hubAddressPrefix:   secondaryHubPrefix
+    hubAddressPrefix:   resolvedSecondaryHubPrefix
     firewallSkuTier:    firewallSkuTier
+    deployVpnGateway:   deployVpnGateway
+    vpnGwScaleUnit:     vpnGwScaleUnit
     identityVnetId:     deploySecondaryRegion ? secIdentitySpokeVnet.outputs.vnetId : ''
     managementVnetId:   deploySecondaryRegion ? secManagementSpokeVnet.outputs.vnetId : ''
     tags:               commonTags
@@ -618,6 +636,8 @@ output vwanId                  string = vwan.outputs.vwanId
 output primaryFirewallId       string = priVwanHub.outputs.firewallId
 output primaryFirewallPrivateIp string = priVwanHub.outputs.firewallPrivateIp
 output primaryVhubId           string = priVwanHub.outputs.vhubId
+output primaryVpnGatewayId     string = deployVpnGateway ? priVwanHub.outputs.vpnGatewayId : 'not-deployed'
+output vpnGatewayDeployed      bool   = deployVpnGateway
 output lawId                   string = monitoring.outputs.lawId
 output lawWorkspaceId          string = monitoring.outputs.lawWorkspaceId
 output actionGroupId           string = monitoring.outputs.actionGroupId

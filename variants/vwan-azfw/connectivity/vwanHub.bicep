@@ -3,31 +3,36 @@
 // Azure Virtual WAN Hub with Azure Firewall (Secured Virtual Hub)
 //
 // Deploys per region:
-//   - Azure Virtual WAN (Standard – required for Azure Firewall in hub)
-//     Global resource: only deployed when isPrimaryRegion = true
-//   - Azure Virtual Hub (regional, /23 minimum address space)
+//   - Azure Virtual Hub (regional, 10.{siteId}.0.0/23 — mirrors the
+//     connectivity VNet address space used in hub-spoke variants)
 //   - Azure Firewall Premium in the hub (Secured Virtual Hub pattern)
 //   - Azure Firewall Policy (Premium tier – IDPS, TLS inspection capable)
 //   - vWAN Hub Routing Intent (force all Internet + Private traffic via AZFW)
 //   - Spoke VNet connections for identity and management VNets
-//   - Azure Bastion subnet is in the management spoke, not the hub
+//   - vWAN VPN Gateway (optional – gated by deployVpnGateway param)
 //
-// Key differences from hub-spoke NVA model:
-//   - No VNet peering required – vWAN hub manages spoke connections natively
-//   - No UDRs on spokes – vWAN routing intent injects routes automatically
-//   - Azure Firewall replaces Sophos XG – no VM-based NVA
-//   - Hub-to-hub transit is automatic via vWAN global routing
-//   - VPN Gateway and ExpressRoute Gateway can be added to the vWAN hub
+// Address space note:
+//   The hub sits at 10.{siteId}.0.0/23 — the same range that the Sophos NVA
+//   hub-spoke variant uses for its connectivity VNet. Since vWAN replaces that
+//   VNet entirely, reusing the same block keeps the per-site /16 layout
+//   consistent across all three variants:
+//     10.x.0.0/23   → vWAN Hub (this module)
+//     10.x.8.0/22   → Identity spoke
+//     10.x.248.0/21 → Management spoke
+//
+// Hub-to-hub transit is automatic via vWAN global routing — no explicit
+// peering required. The VPN Gateway (optional) is the vWAN-native type
+// (Microsoft.Network/vpnGateways), not a standalone virtualNetworkGateway.
 // =============================================================================
 
 param location string
 param environment string
 param customerAbbreviation string
 param regionAbbreviation string
-param vwanId string              // Resource ID of the shared vWAN (global resource)
+param vwanId string
 
-@description('vWAN hub address prefix – minimum /23, must not overlap with any spoke')
-param hubAddressPrefix string    // e.g. 10.101.128.0/23
+@description('vWAN Hub address prefix. Minimum /23. Default uses 10.{siteId}.0.0/23 — mirrors the connectivity VNet block in hub-spoke variants.')
+param hubAddressPrefix string
 
 @description('Identity spoke VNet resource ID to connect to this hub')
 param identityVnetId string
@@ -39,21 +44,26 @@ param managementVnetId string
 @allowed(['Premium', 'Standard'])
 param firewallSkuTier string = 'Premium'
 
+@description('Deploy a vWAN VPN Gateway in this hub. Adds ~30 minutes to provisioning time.')
+param deployVpnGateway bool = false
+
+@description('VPN Gateway scale unit. 1 = 500 Mbps, 2 = 1 Gbps. Each scale unit is an active-active pair.')
+@minValue(1)
+@maxValue(20)
+param vpnGwScaleUnit int = 1
+
 param tags object
 
 var custAbbr = toUpper(customerAbbreviation)
-var regAbbr  = toUpper(regionAbbreviation)
 var env      = environment
 
-var hubName          = 'hub-vwan-${env}-core-connectivity-${custAbbr}-${location}-01'
-var firewallName     = 'azfw-${env}-core-connectivity-${custAbbr}-${location}-01'
-var firewallPipName  = 'pip-azfw-${env}-core-connectivity-${custAbbr}-${location}-01'
-var fwPolicyName     = 'fwpol-${env}-core-${custAbbr}-${location}-01'
+var hubName         = 'hub-vwan-${env}-core-connectivity-${custAbbr}-${location}-01'
+var firewallName    = 'azfw-${env}-core-connectivity-${custAbbr}-${location}-01'
+var fwPolicyName    = 'fwpol-${env}-core-${custAbbr}-${location}-01'
+var vpnGwName       = 'vnet-gw-${env}-core-connectivity-${custAbbr}-${location}-01'
 
 // ---------------------------------------------------------------------------
 // Azure Firewall Policy
-// Premium tier enables IDPS, URL filtering, and TLS inspection.
-// A shared policy allows child policies per workload spoke (inheritance).
 // ---------------------------------------------------------------------------
 resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-06-01' = {
   name: fwPolicyName
@@ -65,8 +75,8 @@ resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-06-01' = {
     }
     threatIntelMode: 'Alert'
     insights: {
-      isEnabled:         true
-      retentionDays:     30
+      isEnabled:    true
+      retentionDays: 30
     }
     dnsSettings: {
       enableProxy: true
@@ -74,7 +84,6 @@ resource firewallPolicy 'Microsoft.Network/firewallPolicies@2023-06-01' = {
   }
 }
 
-// Base rule collection: allow management spoke to reach identity (DC DNS)
 resource baseRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-06-01' = {
   parent: firewallPolicy
   name: 'DefaultRuleCollectionGroup'
@@ -111,25 +120,23 @@ resource baseRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollect
 
 // ---------------------------------------------------------------------------
 // Virtual Hub
-// Represents the regional hub managed by vWAN. The hub is where Azure
-// Firewall is injected as a "secured virtual hub" resource.
 // ---------------------------------------------------------------------------
 resource vhub 'Microsoft.Network/virtualHubs@2023-06-01' = {
   name: hubName
   location: location
   tags: union(tags, { Function: 'Hub-Connectivity', Purpose: 'vWAN-Hub' })
   properties: {
-    virtualWan: { id: vwanId }
-    addressPrefix:   hubAddressPrefix
-    sku:             'Standard'
+    virtualWan:    { id: vwanId }
+    addressPrefix: hubAddressPrefix
+    sku:           'Standard'
     allowBranchToBranchTraffic: true
   }
 }
 
 // ---------------------------------------------------------------------------
-// Azure Firewall in the vWAN Hub (Secured Virtual Hub)
-// No AzureFirewallSubnet needed – the hub manages its own internal subnet.
-// The firewall gets a private IP automatically from the hub address space.
+// Azure Firewall – Secured Virtual Hub pattern
+// SKU name must be AZFW_Hub (not AZFW_VNet) — the hub manages the internal
+// subnet; no AzureFirewallSubnet is needed or allowed.
 // ---------------------------------------------------------------------------
 resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-06-01' = {
   name: firewallName
@@ -143,9 +150,7 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-06-01' = {
     firewallPolicy: { id: firewallPolicy.id }
     virtualHub:     { id: vhub.id }
     hubIPAddresses: {
-      publicIPs: {
-        count: 1
-      }
+      publicIPs: { count: 1 }
     }
   }
   dependsOn: [vhub]
@@ -153,8 +158,9 @@ resource azureFirewall 'Microsoft.Network/azureFirewalls@2023-06-01' = {
 
 // ---------------------------------------------------------------------------
 // vWAN Hub Routing Intent
-// Forces ALL internet-bound and private traffic through Azure Firewall.
-// This replaces per-spoke UDRs – the hub propagates routes automatically.
+// Forces all Internet and Private traffic through the Azure Firewall.
+// Replaces per-spoke UDRs — the hub propagates default routes automatically.
+// Must be deployed after the Firewall so the Firewall ID is known.
 // ---------------------------------------------------------------------------
 resource routingIntent 'Microsoft.Network/virtualHubs/routingIntent@2023-06-01' = {
   parent: vhub
@@ -162,34 +168,62 @@ resource routingIntent 'Microsoft.Network/virtualHubs/routingIntent@2023-06-01' 
   properties: {
     routingPolicies: [
       {
-        name: 'InternetTrafficPolicy'
-        destinations:         ['Internet']
-        nextHop:              azureFirewall.id
+        name:         'InternetTrafficPolicy'
+        destinations: ['Internet']
+        nextHop:      azureFirewall.id
       }
       {
-        name: 'PrivateTrafficPolicy'
-        destinations:         ['PrivateTraffic']
-        nextHop:              azureFirewall.id
+        name:         'PrivateTrafficPolicy'
+        destinations: ['PrivateTraffic']
+        nextHop:      azureFirewall.id
       }
     ]
   }
 }
 
 // ---------------------------------------------------------------------------
-// Spoke VNet Connections to the vWAN Hub
-// These replace VNet peering. The hub propagates routes to all connections.
+// vWAN VPN Gateway (optional)
+// Microsoft.Network/vpnGateways is the vWAN-native gateway type — distinct
+// from Microsoft.Network/virtualNetworkGateways used in hub-spoke variants.
+// It is injected into the vWAN hub directly; no GatewaySubnet is required.
+//
+// Scale unit defines throughput and instance count:
+//   1 scale unit = 500 Mbps aggregate, active-active pair
+//   2 scale units = 1 Gbps aggregate
+// BGP is enabled by default; ASN is auto-assigned by Azure (65515).
+// Provisioning a vWAN VPN Gateway takes approximately 30 minutes.
+// ---------------------------------------------------------------------------
+resource vpnGateway 'Microsoft.Network/vpnGateways@2023-06-01' = if (deployVpnGateway) {
+  name: vpnGwName
+  location: location
+  tags: union(tags, { Function: 'Hub-Connectivity', Purpose: 'vWAN-VPN-Gateway' })
+  properties: {
+    virtualHub:  { id: vhub.id }
+    bgpSettings: {
+      asn:                 65515    // Azure-reserved ASN for vWAN gateways
+      peerWeight:          0
+      bgpPeeringAddresses: []       // Auto-assigned per instance
+    }
+    vpnGatewayScaleUnit: vpnGwScaleUnit
+    isRoutingPreferenceInternet: false
+  }
+  dependsOn: [routingIntent]
+}
+
+// ---------------------------------------------------------------------------
+// Spoke VNet Connections
 // ---------------------------------------------------------------------------
 resource identitySpokeConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2023-06-01' = {
   parent: vhub
-  name:   'conn-identity-${regAbbr}'
+  name:   'conn-identity-${regionAbbreviation}'
   properties: {
-    remoteVirtualNetwork:    { id: identityVnetId }
-    enableInternetSecurity:  true
+    remoteVirtualNetwork:   { id: identityVnetId }
+    enableInternetSecurity: true
     routingConfiguration: {
       associatedRouteTable:  { id: '${vhub.id}/hubRouteTables/defaultRouteTable' }
       propagatedRouteTables: {
-        labels:     ['default']
-        ids:        [{ id: '${vhub.id}/hubRouteTables/defaultRouteTable' }]
+        labels: ['default']
+        ids:    [{ id: '${vhub.id}/hubRouteTables/defaultRouteTable' }]
       }
     }
   }
@@ -198,15 +232,15 @@ resource identitySpokeConnection 'Microsoft.Network/virtualHubs/hubVirtualNetwor
 
 resource managementSpokeConnection 'Microsoft.Network/virtualHubs/hubVirtualNetworkConnections@2023-06-01' = {
   parent: vhub
-  name:   'conn-management-${regAbbr}'
+  name:   'conn-management-${regionAbbreviation}'
   properties: {
-    remoteVirtualNetwork:    { id: managementVnetId }
-    enableInternetSecurity:  true
+    remoteVirtualNetwork:   { id: managementVnetId }
+    enableInternetSecurity: true
     routingConfiguration: {
       associatedRouteTable:  { id: '${vhub.id}/hubRouteTables/defaultRouteTable' }
       propagatedRouteTables: {
-        labels:     ['default']
-        ids:        [{ id: '${vhub.id}/hubRouteTables/defaultRouteTable' }]
+        labels: ['default']
+        ids:    [{ id: '${vhub.id}/hubRouteTables/defaultRouteTable' }]
       }
     }
   }
@@ -216,12 +250,12 @@ resource managementSpokeConnection 'Microsoft.Network/virtualHubs/hubVirtualNetw
 // ---------------------------------------------------------------------------
 // Outputs
 // ---------------------------------------------------------------------------
-output vhubId             string = vhub.id
-output vhubName           string = vhub.name
-output firewallId         string = azureFirewall.id
-output firewallName       string = azureFirewall.name
-output firewallPrivateIp  string = azureFirewall.properties.hubIPAddresses.privateIPAddress
-output firewallPolicyId   string = firewallPolicy.id
-// vWAN hubs do not have a BastionSubnet – Bastion is in the management spoke
-// Spoke connections replace peering – outputs match the hub-spoke contract
+output vhubId              string = vhub.id
+output vhubName            string = vhub.name
+output firewallId          string = azureFirewall.id
+output firewallName        string = azureFirewall.name
+output firewallPrivateIp   string = azureFirewall.properties.hubIPAddresses.privateIPAddress
+output firewallPolicyId    string = firewallPolicy.id
+output vpnGatewayId        string = deployVpnGateway ? vpnGateway.id : ''
+output vpnGatewayDeployed  bool   = deployVpnGateway
 output hubConnectivityType string = 'vwan'

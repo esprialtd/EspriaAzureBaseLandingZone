@@ -75,13 +75,11 @@ EspriaBaseLandingZone/
 
 ## Deploy to Azure (One-Click)
 
-> Replace `**YOUR-ORG**` and `**YOUR-REPO**` with your GitHub org and repo name before publishing.
-
 | Variant | Button |
 |---|---|
-| Sophos NVA | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F**YOUR-ORG**%2F**YOUR-REPO**%2Fmain%2Fvariants%2Fsophos-nva%2Fazuredeploy.json) |
-| vWAN + Azure Firewall | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F**YOUR-ORG**%2F**YOUR-REPO**%2Fmain%2Fvariants%2Fvwan-azfw%2Fazuredeploy.json) |
-| Azure Firewall + VPN GW | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2F**YOUR-ORG**%2F**YOUR-REPO**%2Fmain%2Fvariants%2Fhub-azfw-vpngw%2Fazuredeploy.json) |
+| Sophos NVA | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fsophos-nva%2Fazuredeploy.json) |
+| vWAN + Azure Firewall | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fvwan-azfw%2Fazuredeploy.json) |
+| Azure Firewall + VPN GW | [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fesrpiraltd%2FEspriaAzureBaseLandingZone%2Fmain%2Fvariants%2Fhub-azfw-vpngw%2Fazuredeploy.json) |
 
 Each variant requires its own `azuredeploy.json` (ARM template) generated from the variant's `main.bicep` via `az bicep build`.
 
