@@ -24,8 +24,6 @@ Six-variant, multi-region Azure Landing Zone for Espria-managed customers. Three
 
 ## Deploy to Azure (One-Click)
 
-> Replace `**YOUR-ORG**` and `**YOUR-REPO**` before publishing. The `azuredeploy.json` files are pre-built in each variant folder — no `az bicep build` step required.
-
 ### AD DS Variants
 
 | Variant | Button |
