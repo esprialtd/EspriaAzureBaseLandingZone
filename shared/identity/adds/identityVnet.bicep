@@ -11,6 +11,8 @@ param customerAbbreviation string
 param regionAbbreviation string
 param vnetName string
 param addressPrefix string
+param zoneEnabled bool
+param diskSku string
 
 @description('2nd octet of the 10.x.0.0/16 address space for this region')
 param siteOctet int
@@ -253,7 +255,7 @@ var dcZones = [['1'], ['2'], ['3']]
 resource dcVms 'Microsoft.Compute/virtualMachines@2023-09-01' = [for i in range(0, dcCount): {
   name: '${custAbbr}-AZ${regAbbr}-DC0${i + 1}'
   location: location
-  zones: dcZones[i]
+  zones: zoneEnabled ? dcZones[i] : null
   tags: union(tags, { Application: 'Domain Controller', Function: 'Identity Services', Role: 'DC' })
   properties: {
     hardwareProfile: { vmSize: dcVmSize }
@@ -278,7 +280,7 @@ resource dcVms 'Microsoft.Compute/virtualMachines@2023-09-01' = [for i in range(
       }
       osDisk: {
         createOption:       'FromImage'
-        managedDisk:        { storageAccountType: 'Premium_LRS' }
+        managedDisk:        { storageAccountType: diskSku }
         diskSizeGB:         128
         deleteOption:       'Delete'
       }
@@ -287,7 +289,7 @@ resource dcVms 'Microsoft.Compute/virtualMachines@2023-09-01' = [for i in range(
           lun:          0
           createOption: 'Empty'
           diskSizeGB:   32
-          managedDisk:  { storageAccountType: 'Premium_LRS' }
+          managedDisk:  { storageAccountType: diskSku }
           deleteOption: 'Delete'
           // NTDS/SYSVOL should be placed on data disk, not OS disk
         }

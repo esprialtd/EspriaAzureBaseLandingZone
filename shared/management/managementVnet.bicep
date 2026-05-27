@@ -14,6 +14,10 @@ param vnetName string
 param addressPrefix string
 param siteOctet int
 param hubVnetId string
+param zoneEnabled bool
+param zonesAll array
+param zonesSingle array
+param diskSku string
 
 @description('AzureBastionSubnet resource ID from the connectivity VNet. Bastion attaches to the hub VNet subnet to reach all peered spokes. Pass empty string for vWAN variant where Bastion is in the management spoke.')
 param bastionSubnetId string
@@ -200,7 +204,7 @@ resource mgmtVmNic 'Microsoft.Network/networkInterfaces@2023-06-01' = {
 resource mgmtVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
   name: '${custAbbr}-AZ${regAbbr}-MGMT01'
   location: location
-  zones: ['1']
+  zones: zoneEnabled ? zonesSingle : null
   tags: union(tags, { Application: 'Management Server', Function: 'Management Services', Role: 'Jump' })
   properties: {
     hardwareProfile: { vmSize: mgmtVmSize }
@@ -225,7 +229,7 @@ resource mgmtVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
       }
       osDisk: {
         createOption: 'FromImage'
-        managedDisk:  { storageAccountType: 'Premium_LRS' }
+        managedDisk:  { storageAccountType: diskSku }
         diskSizeGB:   128
         deleteOption: 'Delete'
       }
@@ -257,7 +261,7 @@ resource pipBastion 'Microsoft.Network/publicIPAddresses@2023-06-01' = {
   tags: union(tags, { Function: 'Bastion' })
   sku: { name: 'Standard' }
   properties: { publicIPAllocationMethod: 'Static' }
-  zones: ['1', '2', '3']
+  zones: zoneEnabled ? zonesAll : null
 }
 
 resource bastion 'Microsoft.Network/bastionHosts@2023-06-01' = {

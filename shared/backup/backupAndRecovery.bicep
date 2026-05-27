@@ -17,6 +17,7 @@ param environment string
 param customerAbbreviation string
 param region string
 param tags object
+param zoneEnabled bool
 
 @description('Resource group name this module deploys into – used for naming only')
 param resourceGroupContext string = 'identity'
@@ -36,6 +37,7 @@ var rsvName  = 'rsv-${env}-${resourceGroupContext}-${custAbbr}-${region}-01'
 var buvName  = 'buv-${env}-${resourceGroupContext}-${custAbbr}-${region}-01'
 var bupVmPolicyName  = 'bup-enhanced-vm-${env}-${custAbbr}-${region}-01'
 var bupDiskPolicyName = 'bup-enhanced-disk-${env}-${custAbbr}-${region}-01'
+var buvRedundancy = zoneEnabled ? 'ZoneRedundant' : 'LocallyRedundant'
 
 // ---------------------------------------------------------------------------
 // Recovery Services Vault – VM Backup
@@ -191,7 +193,7 @@ resource buv 'Microsoft.DataProtection/backupVaults@2023-11-01' = if (length(dis
     storageSettings: [
       {
         datastoreType: 'VaultStore'
-        type:          'ZoneRedundant'
+        type:          buvRedundancy
       }
     ]
     securitySettings: {

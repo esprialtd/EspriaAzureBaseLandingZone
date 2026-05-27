@@ -163,6 +163,16 @@ param deploySecondaryRegion bool = true
 @allowed(['prod', 'dev', 'uat'])
 param environment string = 'prod'
 
+//---------------------------------------------------------------------------
+// Region Zone and Disk Redundancy Parameters
+//---------------------------------------------------------------------------
+
+@description('Attempt to use availability zones where supported')
+param useAvailabilityZones bool = true
+
+@description('Prefer ZRS managed disks where supported (non-ASR workloads).')
+param preferZrsDisks bool = true
+
 // ---------------------------------------------------------------------------
 // Networking
 // ---------------------------------------------------------------------------
@@ -434,6 +444,34 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
   }
 }
 
+//---------------------------------------------------------------------------
+// Region Zone and Disk Capabilities
+//---------------------------------------------------------------------------
+
+module priCaps '../../shared/util/regionCapabilities.bicep' = {
+  name: 'caps-primary'
+  params: {
+    region: primaryRegion
+    useAvailabilityZones: useAvailabilityZones
+  }
+}
+
+module secCaps '../../shared/util/regionCapabilities.bicep' = if (deploySecondaryRegion) {
+  name: 'caps-secondary'
+  params: {
+    region: resolvedSecondaryRegion
+    useAvailabilityZones: useAvailabilityZones
+  }
+}
+
+// Disk SKU decisions:
+var preferredDiskSkuPrimary = (preferZrsDisks && priCaps.outputs.zoneEnabled) ? 'Premium_ZRS' : 'Premium_LRS'
+var preferredDiskSkuSecondary = (preferZrsDisks && deploySecondaryRegion && secCaps.outputs.zoneEnabled) ? 'Premium_ZRS' : 'Premium_LRS'
+
+// ASR constraint (Management VM only in your design):
+// If ASR enabled and secondary not zone-capable, do NOT use ZRS on the ASR protected VM disks.
+var asrSafeDiskSkuPrimary = (enableAsrMgmtVm && deploySecondaryRegion && !secCaps.outputs.zoneEnabled) ? 'Premium_LRS' : preferredDiskSkuPrimary
+
 // ===========================================================================
 // CONNECTIVITY – Hub VNet + Azure Firewall + Active-Active VPN Gateway
 // ===========================================================================
@@ -507,6 +545,10 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
     onPremAddressPrefix: onPremAddressPrefix
     adminUsername: adminUsername, adminPassword: adminPassword
     mgmtVmSize: mgmtVmSize, tags: commonTags
+    zoneEnabled: priCaps.outputs.zoneEnabled
+    zonesAll: priCaps.outputs.zonesAll
+    zonesSingle: priCaps.outputs.zonesSingle
+    diskSku: asrSafeDiskSkuPrimary
   }
 }
 
@@ -541,6 +583,10 @@ module secManagement '../../shared/management/managementVnet.bicep' = if (deploy
     onPremAddressPrefix: onPremAddressPrefix
     adminUsername: adminUsername, adminPassword: adminPassword
     mgmtVmSize: mgmtVmSize, tags: commonTags
+    zoneEnabled: priCaps.outputs.zoneEnabled
+    zonesAll: priCaps.outputs.zonesAll
+    zonesSingle: priCaps.outputs.zonesSingle
+    diskSku: asrSafeDiskSkuPrimary
   }
 }
 
@@ -636,6 +682,7 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
       rgName: rgPriManagement
     }]
     diskBackupTargets: []
+    zoneEnabled: priCaps.outputs.zoneEnabled
   }
 }
 

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "3997356929933436971"
+      "templateHash": "14156764884892836816"
     }
   },
   "parameters": {
@@ -92,6 +92,20 @@
       "defaultValue": true,
       "metadata": {
         "description": "Deploy resources into the secondary region. Set to false for primary-only deployments."
+      }
+    },
+    "useAvailabilityZones": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Attempt to use availability zones where supported"
+      }
+    },
+    "preferZrsDisks": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Prefer ZRS managed disks where supported (non-ASR workloads)."
       }
     },
     "environment": {
@@ -850,7 +864,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "3976679666766897253"
+              "templateHash": "2434941203620245459"
             }
           },
           "parameters": {
@@ -914,7 +928,7 @@
             "subnetPrivEp": "[format('10.{0}.7.0/24', parameters('siteOctet'))]",
             "nvaLanIp": "[format('10.{0}.0.4', parameters('siteOctet'))]",
             "nvaWanIp": "[format('10.{0}.0.68', parameters('siteOctet'))]",
-            "nvaName": "[format('{0}AZ{1}SFOS01', variables('custAbbr'), variables('regAbbr'))]",
+            "nvaName": "[format('{0}AZ{1}FW01', variables('custAbbr'), variables('regAbbr'))]",
             "nvaLanNicName": "[format('{0}-nic-lan', variables('nvaName'))]",
             "nvaWanNicName": "[format('{0}-nic-wan', variables('nvaName'))]"
           },
@@ -1081,11 +1095,7 @@
               "properties": {
                 "publicIPAllocationMethod": "Static"
               },
-              "zones": [
-                "1",
-                "2",
-                "3"
-              ]
+              "zones": "[if(empty(parameters('location')), null(), null())]"
             },
             {
               "type": "Microsoft.Network/networkInterfaces",
@@ -1309,6 +1319,10 @@
           "customerDomainName": {
             "value": "[parameters('customerDomainName')]"
           },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value]"
+          },
+          "diskSku": "[if(and(parameters('preferZrsDisks'), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value), createObject('value', 'Premium_ZRS'), createObject('value', 'Premium_LRS'))]",
           "tags": {
             "value": "[union(variables('commonTags'), createObject('Location', variables('tagLocationPrimary')))]"
           }
@@ -1320,7 +1334,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "17622114469789619418"
+              "templateHash": "2492435063626094865"
             }
           },
           "parameters": {
@@ -1340,6 +1354,12 @@
               "type": "string"
             },
             "addressPrefix": {
+              "type": "string"
+            },
+            "zoneEnabled": {
+              "type": "bool"
+            },
+            "diskSku": {
               "type": "string"
             },
             "siteOctet": {
@@ -1635,7 +1655,7 @@
               "apiVersion": "2023-09-01",
               "name": "[format('{0}-AZ{1}-DC0{2}', variables('custAbbr'), variables('regAbbr'), add(range(0, parameters('dcCount'))[copyIndex()], 1))]",
               "location": "[parameters('location')]",
-              "zones": "[variables('dcZones')[range(0, parameters('dcCount'))[copyIndex()]]]",
+              "zones": "[if(parameters('zoneEnabled'), variables('dcZones')[range(0, parameters('dcCount'))[copyIndex()]], null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Domain Controller', 'Function', 'Identity Services', 'Role', 'DC'))]",
               "properties": {
                 "hardwareProfile": {
@@ -1663,7 +1683,7 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "[parameters('diskSku')]"
                     },
                     "diskSizeGB": 128,
                     "deleteOption": "Delete"
@@ -1674,7 +1694,7 @@
                       "createOption": "Empty",
                       "diskSizeGB": 32,
                       "managedDisk": {
-                        "storageAccountType": "Premium_LRS"
+                        "storageAccountType": "[parameters('diskSku')]"
                       },
                       "deleteOption": "Delete"
                     }
@@ -1737,6 +1757,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-pri-connectivity')]"
       ]
     },
@@ -1793,6 +1814,16 @@
           "mgmtVmSize": {
             "value": "[parameters('mgmtVmSize')]"
           },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value]"
+          },
+          "zonesAll": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zonesAll.value]"
+          },
+          "zonesSingle": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zonesSingle.value]"
+          },
+          "diskSku": "[if(and(and(parameters('enableAsrMgmtVm'), parameters('deploySecondaryRegion')), not(reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value)), createObject('value', 'Premium_LRS'), if(and(parameters('preferZrsDisks'), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value), createObject('value', 'Premium_ZRS'), createObject('value', 'Premium_LRS')))]",
           "tags": {
             "value": "[union(variables('commonTags'), createObject('Location', variables('tagLocationPrimary')))]"
           }
@@ -1804,7 +1835,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "4519432487909289718"
+              "templateHash": "14800058784956178264"
             }
           },
           "parameters": {
@@ -1830,6 +1861,18 @@
               "type": "int"
             },
             "hubVnetId": {
+              "type": "string"
+            },
+            "zoneEnabled": {
+              "type": "bool"
+            },
+            "zonesAll": {
+              "type": "array"
+            },
+            "zonesSingle": {
+              "type": "array"
+            },
+            "diskSku": {
               "type": "string"
             },
             "bastionSubnetId": {
@@ -2043,9 +2086,7 @@
               "apiVersion": "2023-09-01",
               "name": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
-              "zones": [
-                "1"
-              ],
+              "zones": "[if(parameters('zoneEnabled'), parameters('zonesSingle'), null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Management Server', 'Function', 'Management Services', 'Role', 'Jump'))]",
               "properties": {
                 "hardwareProfile": {
@@ -2073,7 +2114,7 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "[parameters('diskSku')]"
                     },
                     "diskSizeGB": 128,
                     "deleteOption": "Delete"
@@ -2112,11 +2153,7 @@
               "properties": {
                 "publicIPAllocationMethod": "Static"
               },
-              "zones": [
-                "1",
-                "2",
-                "3"
-              ]
+              "zones": "[if(parameters('zoneEnabled'), parameters('zonesAll'), null())]"
             },
             {
               "type": "Microsoft.Network/bastionHosts",
@@ -2176,7 +2213,9 @@
         }
       },
       "dependsOn": [
-        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-pri-connectivity')]"
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-pri-connectivity')]",
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary')]"
       ]
     },
     {
@@ -2336,7 +2375,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "3976679666766897253"
+              "templateHash": "2434941203620245459"
             }
           },
           "parameters": {
@@ -2400,7 +2439,7 @@
             "subnetPrivEp": "[format('10.{0}.7.0/24', parameters('siteOctet'))]",
             "nvaLanIp": "[format('10.{0}.0.4', parameters('siteOctet'))]",
             "nvaWanIp": "[format('10.{0}.0.68', parameters('siteOctet'))]",
-            "nvaName": "[format('{0}AZ{1}SFOS01', variables('custAbbr'), variables('regAbbr'))]",
+            "nvaName": "[format('{0}AZ{1}FW01', variables('custAbbr'), variables('regAbbr'))]",
             "nvaLanNicName": "[format('{0}-nic-lan', variables('nvaName'))]",
             "nvaWanNicName": "[format('{0}-nic-wan', variables('nvaName'))]"
           },
@@ -2567,11 +2606,7 @@
               "properties": {
                 "publicIPAllocationMethod": "Static"
               },
-              "zones": [
-                "1",
-                "2",
-                "3"
-              ]
+              "zones": "[if(empty(parameters('location')), null(), null())]"
             },
             {
               "type": "Microsoft.Network/networkInterfaces",
@@ -2792,6 +2827,10 @@
           "customerDomainName": {
             "value": "[parameters('customerDomainName')]"
           },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value]"
+          },
+          "diskSku": "[if(and(and(parameters('preferZrsDisks'), parameters('deploySecondaryRegion')), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value), createObject('value', 'Premium_ZRS'), createObject('value', 'Premium_LRS'))]",
           "tags": {
             "value": "[union(variables('commonTags'), createObject('Location', variables('tagLocationSecondary')))]"
           }
@@ -2803,7 +2842,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "17622114469789619418"
+              "templateHash": "2492435063626094865"
             }
           },
           "parameters": {
@@ -2823,6 +2862,12 @@
               "type": "string"
             },
             "addressPrefix": {
+              "type": "string"
+            },
+            "zoneEnabled": {
+              "type": "bool"
+            },
+            "diskSku": {
               "type": "string"
             },
             "siteOctet": {
@@ -3118,7 +3163,7 @@
               "apiVersion": "2023-09-01",
               "name": "[format('{0}-AZ{1}-DC0{2}', variables('custAbbr'), variables('regAbbr'), add(range(0, parameters('dcCount'))[copyIndex()], 1))]",
               "location": "[parameters('location')]",
-              "zones": "[variables('dcZones')[range(0, parameters('dcCount'))[copyIndex()]]]",
+              "zones": "[if(parameters('zoneEnabled'), variables('dcZones')[range(0, parameters('dcCount'))[copyIndex()]], null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Domain Controller', 'Function', 'Identity Services', 'Role', 'DC'))]",
               "properties": {
                 "hardwareProfile": {
@@ -3146,7 +3191,7 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "[parameters('diskSku')]"
                     },
                     "diskSizeGB": 128,
                     "deleteOption": "Delete"
@@ -3157,7 +3202,7 @@
                       "createOption": "Empty",
                       "diskSizeGB": 32,
                       "managedDisk": {
-                        "storageAccountType": "Premium_LRS"
+                        "storageAccountType": "[parameters('diskSku')]"
                       },
                       "deleteOption": "Delete"
                     }
@@ -3220,6 +3265,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity')]"
       ]
     },
@@ -3271,6 +3317,16 @@
           "mgmtVmSize": {
             "value": "[parameters('mgmtVmSize')]"
           },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value]"
+          },
+          "zonesAll": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zonesAll.value]"
+          },
+          "zonesSingle": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zonesSingle.value]"
+          },
+          "diskSku": "[if(and(and(parameters('preferZrsDisks'), parameters('deploySecondaryRegion')), reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value), createObject('value', 'Premium_ZRS'), createObject('value', 'Premium_LRS'))]",
           "tags": {
             "value": "[union(variables('commonTags'), createObject('Location', variables('tagLocationSecondary')))]"
           }
@@ -3282,7 +3338,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "4519432487909289718"
+              "templateHash": "14800058784956178264"
             }
           },
           "parameters": {
@@ -3308,6 +3364,18 @@
               "type": "int"
             },
             "hubVnetId": {
+              "type": "string"
+            },
+            "zoneEnabled": {
+              "type": "bool"
+            },
+            "zonesAll": {
+              "type": "array"
+            },
+            "zonesSingle": {
+              "type": "array"
+            },
+            "diskSku": {
               "type": "string"
             },
             "bastionSubnetId": {
@@ -3521,9 +3589,7 @@
               "apiVersion": "2023-09-01",
               "name": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
-              "zones": [
-                "1"
-              ],
+              "zones": "[if(parameters('zoneEnabled'), parameters('zonesSingle'), null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Management Server', 'Function', 'Management Services', 'Role', 'Jump'))]",
               "properties": {
                 "hardwareProfile": {
@@ -3551,7 +3617,7 @@
                   "osDisk": {
                     "createOption": "FromImage",
                     "managedDisk": {
-                      "storageAccountType": "Premium_LRS"
+                      "storageAccountType": "[parameters('diskSku')]"
                     },
                     "diskSizeGB": 128,
                     "deleteOption": "Delete"
@@ -3590,11 +3656,7 @@
               "properties": {
                 "publicIPAllocationMethod": "Static"
               },
-              "zones": [
-                "1",
-                "2",
-                "3"
-              ]
+              "zones": "[if(parameters('zoneEnabled'), parameters('zonesAll'), null())]"
             },
             {
               "type": "Microsoft.Network/bastionHosts",
@@ -3655,8 +3717,182 @@
       },
       "dependsOn": [
         "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]",
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity')]"
       ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "caps-primary",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "region": {
+            "value": "[parameters('primaryRegion')]"
+          },
+          "useAvailabilityZones": {
+            "value": "[parameters('useAvailabilityZones')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "8712366271563709879"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region name (e.g. uksouth, ukwest)"
+              }
+            },
+            "useAvailabilityZones": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether the deployment should try to use availability zones when supported"
+              }
+            }
+          },
+          "variables": {
+            "zoneCapableRegions": [
+              "uksouth",
+              "westeurope",
+              "northeurope",
+              "eastus",
+              "eastus2",
+              "westus2",
+              "westus3"
+            ],
+            "supportsZones": "[contains(variables('zoneCapableRegions'), toLower(parameters('region')))]",
+            "zoneEnabled": "[and(parameters('useAvailabilityZones'), variables('supportsZones'))]",
+            "zoneSetAll": [
+              "1",
+              "2",
+              "3"
+            ],
+            "zoneSetSingle": [
+              "1"
+            ]
+          },
+          "resources": [],
+          "outputs": {
+            "supportsZones": {
+              "type": "bool",
+              "value": "[variables('supportsZones')]"
+            },
+            "zoneEnabled": {
+              "type": "bool",
+              "value": "[variables('zoneEnabled')]"
+            },
+            "zonesAll": {
+              "type": "array",
+              "value": "[if(variables('zoneEnabled'), variables('zoneSetAll'), createArray())]"
+            },
+            "zonesSingle": {
+              "type": "array",
+              "value": "[if(variables('zoneEnabled'), variables('zoneSetSingle'), createArray())]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "condition": "[parameters('deploySecondaryRegion')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "caps-secondary",
+      "location": "[deployment().location]",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "region": {
+            "value": "[variables('resolvedSecondaryRegion')]"
+          },
+          "useAvailabilityZones": {
+            "value": "[parameters('useAvailabilityZones')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2018-05-01/subscriptionDeploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.43.8.12551",
+              "templateHash": "8712366271563709879"
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "string",
+              "metadata": {
+                "description": "Azure region name (e.g. uksouth, ukwest)"
+              }
+            },
+            "useAvailabilityZones": {
+              "type": "bool",
+              "defaultValue": true,
+              "metadata": {
+                "description": "Whether the deployment should try to use availability zones when supported"
+              }
+            }
+          },
+          "variables": {
+            "zoneCapableRegions": [
+              "uksouth",
+              "westeurope",
+              "northeurope",
+              "eastus",
+              "eastus2",
+              "westus2",
+              "westus3"
+            ],
+            "supportsZones": "[contains(variables('zoneCapableRegions'), toLower(parameters('region')))]",
+            "zoneEnabled": "[and(parameters('useAvailabilityZones'), variables('supportsZones'))]",
+            "zoneSetAll": [
+              "1",
+              "2",
+              "3"
+            ],
+            "zoneSetSingle": [
+              "1"
+            ]
+          },
+          "resources": [],
+          "outputs": {
+            "supportsZones": {
+              "type": "bool",
+              "value": "[variables('supportsZones')]"
+            },
+            "zoneEnabled": {
+              "type": "bool",
+              "value": "[variables('zoneEnabled')]"
+            },
+            "zonesAll": {
+              "type": "array",
+              "value": "[if(variables('zoneEnabled'), variables('zoneSetAll'), createArray())]"
+            },
+            "zonesSingle": {
+              "type": "array",
+              "value": "[if(variables('zoneEnabled'), variables('zoneSetSingle'), createArray())]"
+            }
+          }
+        }
+      }
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -5096,6 +5332,9 @@
           },
           "diskBackupTargets": {
             "value": []
+          },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value]"
           }
         },
         "template": {
@@ -5105,7 +5344,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16308799708085054746"
+              "templateHash": "11502083353903335757"
             }
           },
           "parameters": {
@@ -5123,6 +5362,9 @@
             },
             "tags": {
               "type": "object"
+            },
+            "zoneEnabled": {
+              "type": "bool"
             },
             "resourceGroupContext": {
               "type": "string",
@@ -5152,7 +5394,8 @@
             "rsvName": "[format('rsv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "buvName": "[format('buv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "bupVmPolicyName": "[format('bup-enhanced-vm-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
-            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]"
+            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
+            "buvRedundancy": "[if(parameters('zoneEnabled'), 'ZoneRedundant', 'LocallyRedundant')]"
           },
           "resources": [
             {
@@ -5321,7 +5564,7 @@
                 "storageSettings": [
                   {
                     "datastoreType": "VaultStore",
-                    "type": "ZoneRedundant"
+                    "type": "[variables('buvRedundancy')]"
                   }
                 ],
                 "securitySettings": {
@@ -5469,6 +5712,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriIdentity')), 'Microsoft.Resources/deployments', 'deploy-pri-identity')]"
       ]
     },
@@ -5513,6 +5757,9 @@
           },
           "diskBackupTargets": {
             "value": []
+          },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value]"
           }
         },
         "template": {
@@ -5522,7 +5769,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16308799708085054746"
+              "templateHash": "11502083353903335757"
             }
           },
           "parameters": {
@@ -5540,6 +5787,9 @@
             },
             "tags": {
               "type": "object"
+            },
+            "zoneEnabled": {
+              "type": "bool"
             },
             "resourceGroupContext": {
               "type": "string",
@@ -5569,7 +5819,8 @@
             "rsvName": "[format('rsv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "buvName": "[format('buv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "bupVmPolicyName": "[format('bup-enhanced-vm-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
-            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]"
+            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
+            "buvRedundancy": "[if(parameters('zoneEnabled'), 'ZoneRedundant', 'LocallyRedundant')]"
           },
           "resources": [
             {
@@ -5738,7 +5989,7 @@
                 "storageSettings": [
                   {
                     "datastoreType": "VaultStore",
-                    "type": "ZoneRedundant"
+                    "type": "[variables('buvRedundancy')]"
                   }
                 ],
                 "securitySettings": {
@@ -5886,6 +6137,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriManagement')), 'Microsoft.Resources/deployments', 'deploy-pri-management')]"
       ]
     },
@@ -5928,6 +6180,9 @@
                 "diskId": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-pri-connectivity'), '2025-04-01').outputs.nvaOsDiskId.value]"
               }
             ]
+          },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary'), '2025-04-01').outputs.zoneEnabled.value]"
           }
         },
         "template": {
@@ -5937,7 +6192,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16308799708085054746"
+              "templateHash": "11502083353903335757"
             }
           },
           "parameters": {
@@ -5955,6 +6210,9 @@
             },
             "tags": {
               "type": "object"
+            },
+            "zoneEnabled": {
+              "type": "bool"
             },
             "resourceGroupContext": {
               "type": "string",
@@ -5984,7 +6242,8 @@
             "rsvName": "[format('rsv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "buvName": "[format('buv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "bupVmPolicyName": "[format('bup-enhanced-vm-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
-            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]"
+            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
+            "buvRedundancy": "[if(parameters('zoneEnabled'), 'ZoneRedundant', 'LocallyRedundant')]"
           },
           "resources": [
             {
@@ -6153,7 +6412,7 @@
                 "storageSettings": [
                   {
                     "datastoreType": "VaultStore",
-                    "type": "ZoneRedundant"
+                    "type": "[variables('buvRedundancy')]"
                   }
                 ],
                 "securitySettings": {
@@ -6301,6 +6560,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-primary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-pri-connectivity')]"
       ]
     },
@@ -6345,6 +6605,9 @@
           },
           "diskBackupTargets": {
             "value": []
+          },
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value]"
           }
         },
         "template": {
@@ -6354,7 +6617,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16308799708085054746"
+              "templateHash": "11502083353903335757"
             }
           },
           "parameters": {
@@ -6372,6 +6635,9 @@
             },
             "tags": {
               "type": "object"
+            },
+            "zoneEnabled": {
+              "type": "bool"
             },
             "resourceGroupContext": {
               "type": "string",
@@ -6401,7 +6667,8 @@
             "rsvName": "[format('rsv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "buvName": "[format('buv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "bupVmPolicyName": "[format('bup-enhanced-vm-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
-            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]"
+            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
+            "buvRedundancy": "[if(parameters('zoneEnabled'), 'ZoneRedundant', 'LocallyRedundant')]"
           },
           "resources": [
             {
@@ -6570,7 +6837,7 @@
                 "storageSettings": [
                   {
                     "datastoreType": "VaultStore",
-                    "type": "ZoneRedundant"
+                    "type": "[variables('buvRedundancy')]"
                   }
                 ],
                 "securitySettings": {
@@ -6718,6 +6985,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecIdentity')), 'Microsoft.Resources/deployments', 'deploy-sec-identity')]"
       ]
     },
@@ -6754,7 +7022,10 @@
           "vmBackupTargets": {
             "value": []
           },
-          "diskBackupTargets": "[if(parameters('deploySecondaryRegion'), createObject('value', createArray(createObject('diskId', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity'), '2025-04-01').outputs.nvaOsDiskId.value))), createObject('value', createArray()))]"
+          "diskBackupTargets": "[if(parameters('deploySecondaryRegion'), createObject('value', createArray(createObject('diskId', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity'), '2025-04-01').outputs.nvaOsDiskId.value))), createObject('value', createArray()))]",
+          "zoneEnabled": {
+            "value": "[reference(subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary'), '2025-04-01').outputs.zoneEnabled.value]"
+          }
         },
         "template": {
           "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
@@ -6763,7 +7034,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "16308799708085054746"
+              "templateHash": "11502083353903335757"
             }
           },
           "parameters": {
@@ -6781,6 +7052,9 @@
             },
             "tags": {
               "type": "object"
+            },
+            "zoneEnabled": {
+              "type": "bool"
             },
             "resourceGroupContext": {
               "type": "string",
@@ -6810,7 +7084,8 @@
             "rsvName": "[format('rsv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "buvName": "[format('buv-{0}-{1}-{2}-{3}-01', variables('env'), parameters('resourceGroupContext'), variables('custAbbr'), parameters('region'))]",
             "bupVmPolicyName": "[format('bup-enhanced-vm-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
-            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]"
+            "bupDiskPolicyName": "[format('bup-enhanced-disk-{0}-{1}-{2}-01', variables('env'), variables('custAbbr'), parameters('region'))]",
+            "buvRedundancy": "[if(parameters('zoneEnabled'), 'ZoneRedundant', 'LocallyRedundant')]"
           },
           "resources": [
             {
@@ -6979,7 +7254,7 @@
                 "storageSettings": [
                   {
                     "datastoreType": "VaultStore",
-                    "type": "ZoneRedundant"
+                    "type": "[variables('buvRedundancy')]"
                   }
                 ],
                 "securitySettings": {
@@ -7127,6 +7402,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'caps-secondary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity')]"
       ]
     },

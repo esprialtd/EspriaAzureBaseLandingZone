@@ -150,6 +150,16 @@ param secondaryRegion string = 'auto'
 @description('Deploy resources into the secondary region. Set to false for primary-only deployments.')
 param deploySecondaryRegion bool = true
 
+//---------------------------------------------------------------------------
+// Region Zone and Disk Redundancy Parameters
+//---------------------------------------------------------------------------
+
+@description('Attempt to use availability zones where supported')
+param useAvailabilityZones bool = true
+
+@description('Prefer ZRS managed disks where supported (non-ASR workloads).')
+param preferZrsDisks bool = true
+
 // ---------------------------------------------------------------------------
 // Environment
 // ---------------------------------------------------------------------------
@@ -593,6 +603,8 @@ module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
     dcCount:              2
     dcVmSize:             dcVmSize
     customerDomainName:   customerDomainName
+    zoneEnabled: priCaps.outputs.zoneEnabled
+    diskSku: preferredDiskSkuPrimary
     tags:                 union(commonTags, { Location: tagLocationPrimary })
   }
 }
@@ -618,6 +630,10 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
     adminUsername:        adminUsername
     adminPassword:        adminPassword
     mgmtVmSize:           mgmtVmSize
+    zoneEnabled: priCaps.outputs.zoneEnabled
+    zonesAll: priCaps.outputs.zonesAll
+    zonesSingle: priCaps.outputs.zonesSingle
+    diskSku: asrSafeDiskSkuPrimary // ASR constraint: if ASR enabled and secondary region not zone-capable, do NOT use ZRS on the ASR-protected management VM disks.
     tags:                 union(commonTags, { Location: tagLocationPrimary })
   }
 }
@@ -676,6 +692,8 @@ module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deployS
     dcCount:              1
     dcVmSize:             dcVmSize
     customerDomainName:   customerDomainName
+    zoneEnabled: secCaps.outputs.zoneEnabled
+    diskSku: preferredDiskSkuSecondary
     tags:                 union(commonTags, { Location: tagLocationSecondary })
   }
 }
@@ -699,9 +717,41 @@ module secManagement '../../shared/management/managementVnet.bicep' = if (deploy
     adminUsername:        adminUsername
     adminPassword:        adminPassword
     mgmtVmSize:           mgmtVmSize
+    zoneEnabled: secCaps.outputs.zoneEnabled
+    zonesAll: secCaps.outputs.zonesAll
+    zonesSingle: secCaps.outputs.zonesSingle
+    diskSku: preferredDiskSkuSecondary // ASR constraint: if ASR enabled and primary region not zone-capable, do NOT use ZRS on the ASR-protected management VM disks.
     tags:                 union(commonTags, { Location: tagLocationSecondary })
   }
 }
+
+//---------------------------------------------------------------------------
+// Region Zone and Disk Capabilities
+//---------------------------------------------------------------------------
+
+module priCaps '../../shared/util/regionCapabilities.bicep' = {
+  name: 'caps-primary'
+  params: {
+    region: primaryRegion
+    useAvailabilityZones: useAvailabilityZones
+  }
+}
+
+module secCaps '../../shared/util/regionCapabilities.bicep' = if (deploySecondaryRegion) {
+  name: 'caps-secondary'
+  params: {
+    region: resolvedSecondaryRegion
+    useAvailabilityZones: useAvailabilityZones
+  }
+}
+
+// Disk SKU decisions:
+var preferredDiskSkuPrimary = (preferZrsDisks && priCaps.outputs.zoneEnabled) ? 'Premium_ZRS' : 'Premium_LRS'
+var preferredDiskSkuSecondary = (preferZrsDisks && deploySecondaryRegion && secCaps.outputs.zoneEnabled) ? 'Premium_ZRS' : 'Premium_LRS'
+
+// ASR constraint (Management VM only in your design):
+// If ASR enabled and secondary not zone-capable, do NOT use ZRS on the ASR protected VM disks.
+var asrSafeDiskSkuPrimary = (enableAsrMgmtVm && deploySecondaryRegion && !secCaps.outputs.zoneEnabled) ? 'Premium_LRS' : preferredDiskSkuPrimary
 
 // ===========================================================================
 // HUB → SPOKE RETURN PEERINGS
@@ -827,6 +877,7 @@ module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if 
     tags:                 union(commonTags, { Location: tagLocationPrimary })
     vmBackupTargets: priDcBackupTargets
     diskBackupTargets: []
+    zoneEnabled: priCaps.outputs.zoneEnabled
   }
 }
 
@@ -849,6 +900,7 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
       rgName: rgPriManagement
     }]
     diskBackupTargets: []
+    zoneEnabled: priCaps.outputs.zoneEnabled
   }
 }
 
@@ -867,6 +919,7 @@ module backupNvaPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enab
     tags:                 union(commonTags, { Location: tagLocationPrimary })
     vmBackupTargets:   []
     diskBackupTargets: [{ diskId: priConnectivity.outputs.nvaOsDiskId }]
+    zoneEnabled: priCaps.outputs.zoneEnabled
   }
 }
 
@@ -889,6 +942,7 @@ module backupIdentitySecondary '../../shared/backup/backupAndRecovery.bicep' = i
       rgName: rgSecIdentity
     }]
     diskBackupTargets: []
+    zoneEnabled: secCaps.outputs.zoneEnabled
   }
 }
 
@@ -904,6 +958,7 @@ module backupNvaSecondary '../../shared/backup/backupAndRecovery.bicep' = if (en
     tags:                 union(commonTags, { Location: tagLocationSecondary })
     vmBackupTargets:   []
     diskBackupTargets: deploySecondaryRegion ? [{ diskId: secConnectivity.outputs.nvaOsDiskId }] : []
+    zoneEnabled: secCaps.outputs.zoneEnabled
   }
 }
 

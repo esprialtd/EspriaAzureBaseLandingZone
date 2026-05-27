@@ -47,8 +47,8 @@ var nvaWanIp  = '10.${siteOctet}.0.68'
 
 // Resource names
 // Sophos XG Marketplace does not support hyphens in VM name – use compact format
-// Pattern: {CUST}AZ{REG}SFOS01  e.g. CONAZUKSSFOS01
-var nvaName       = '${custAbbr}AZ${regAbbr}SFOS01'
+// Pattern: {CUST}AZ{REG}FW01  e.g. CONAZUKSFW01
+var nvaName       = '${custAbbr}AZ${regAbbr}FW01'
 var nvaLanNicName = '${nvaName}-nic-lan'
 var nvaWanNicName = '${nvaName}-nic-wan'
 
@@ -206,7 +206,7 @@ resource pipNvaWan 'Microsoft.Network/publicIPAddresses@2023-06-01' = {
   tags: union(tags, { Function: 'NVA-WAN' })
   sku: { name: 'Standard' }
   properties: { publicIPAllocationMethod: 'Static' }
-  zones: ['1', '2', '3']
+  zones: empty(location) ? null : null
 }
 
 // ---------------------------------------------------------------------------
