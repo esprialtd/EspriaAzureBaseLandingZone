@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "18006620606266978997"
+      "templateHash": "7139176796129324779"
     }
   },
   "parameters": {
@@ -906,7 +906,11 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-primary')]",
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1196,7 +1200,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1486,7 +1493,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
@@ -1776,7 +1786,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
@@ -2066,7 +2079,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -7520,7 +7536,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "condition": "[and(parameters('enableAsrMgmtVm'), parameters('deploySecondaryRegion'))]",
@@ -7839,6 +7858,7 @@
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-asr-cache-storage')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriManagement')), 'Microsoft.Resources/deployments', 'deploy-pri-management')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriManagement')), 'Microsoft.Resources/deployments', 'deploy-pri-management-spoke')]",
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecManagement')), 'Microsoft.Resources/deployments', 'deploy-sec-management')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecManagement')), 'Microsoft.Resources/deployments', 'deploy-sec-management-spoke')]"
       ]
     }

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "14029335391252258854"
+      "templateHash": "3997356929933436971"
     }
   },
   "parameters": {
@@ -1248,7 +1248,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-primary')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -2731,7 +2734,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
@@ -3648,6 +3654,7 @@
         }
       },
       "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]",
         "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgSecConnectivity')), 'Microsoft.Resources/deployments', 'deploy-sec-connectivity')]"
       ]
     },

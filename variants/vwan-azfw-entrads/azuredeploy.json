@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "3195846386094295507"
+      "templateHash": "21879294996087859"
     }
   },
   "parameters": {
@@ -925,7 +925,11 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-primary')]",
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1215,7 +1219,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -1505,7 +1512,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
@@ -1795,7 +1805,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
@@ -2085,7 +2098,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', subscription().subscriptionId, variables('rgPriConnectivity')), 'Microsoft.Resources/deployments', 'deploy-vwan')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",

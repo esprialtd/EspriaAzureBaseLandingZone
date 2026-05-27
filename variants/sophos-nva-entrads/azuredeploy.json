@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "3283168187494279505"
+      "templateHash": "6940851540524131401"
     }
   },
   "parameters": {
@@ -1267,7 +1267,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-primary')]"
+      ]
     },
     {
       "type": "Microsoft.Resources/deployments",
@@ -2722,7 +2725,10 @@
             }
           }
         }
-      }
+      },
+      "dependsOn": [
+        "[subscriptionResourceId('Microsoft.Resources/deployments', 'deploy-rgs-secondary')]"
+      ]
     },
     {
       "condition": "[parameters('deploySecondaryRegion')]",
