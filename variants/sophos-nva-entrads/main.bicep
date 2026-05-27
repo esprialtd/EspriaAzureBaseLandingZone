@@ -184,6 +184,17 @@ param onPremAddressPrefix string = '10.1.0.0/16'
 // Sophos XG NVA Parameters
 // ---------------------------------------------------------------------------
 @description('Sophos XG NVA VM size')
+@allowed ([
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D8s_v5'
+  'Standard_D2ds_v5'
+  'Standard_D4ds_v5'
+  'Standard_D8ds_v5'
+  'Standard_F2s_v2'
+  'Standard_F4s_v2'
+  'Standard_F8s_v2'
+])
 param sophosVmSize string = 'Standard_D2s_v5'
 
 @description('Sophos XG Marketplace image version. Use "latest" or a specific version string.')
@@ -193,17 +204,43 @@ param sophosImageVersion string = 'latest'
 // Identity / VM Parameters
 // ---------------------------------------------------------------------------
 @description('Admin username for all VMs (DCs, management VM)')
-param adminUsername string
+param adminUsername string = 'esprialocaladmin'
 
 @secure()
 @description('Admin password for all VMs – must meet Azure complexity requirements (12+ chars, upper, lower, number, symbol)')
 param adminPassword string
 
 @description('Domain Controller VM size')
-param dcVmSize string = 'Standard_D2s_v5'
+@allowed([
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2ds_v5'
+  'Standard_D4ds_v5'
+  'Standard_D2ads_v5'
+  'Standard_D4ads_v5'
+  'Standard_D2ls_v5'
+  'Standard_D4ls_v5'
+])
+param dcVmSize   string = 'Standard_D2s_v5'
 
 @description('Management jump VM size')
-param mgmtVmSize string = 'Standard_B2ms'
+@allowed([
+  'Standard_B2ms'
+  'Standard_B4ms'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2ds_v5'
+  'Standard_D4ds_v5'
+  'Standard_D2ads_v5'
+  'Standard_D4ads_v5'
+  'Standard_D2ls_v5'
+  'Standard_D4ls_v5'
+])
+param mgmtVmSize string = 'Standard_D2s_v5'
 
 // ---------------------------------------------------------------------------
 // Tagging

@@ -207,14 +207,44 @@ param firewallSkuTier string = 'Premium'
 // ---------------------------------------------------------------------------
 // Identity / VM Parameters
 // ---------------------------------------------------------------------------
-param adminUsername string
+@description('Admin username for all VMs (DCs, management VM)')
+param adminUsername string = 'esprialocaladmin'
 
 @secure()
-@description('Admin password for DC and management VMs')
+@description('Admin password for all VMs – must meet Azure complexity requirements (12+ chars, upper, lower, number, symbol)')
 param adminPassword string
 
-param dcVmSize  string = 'Standard_D2s_v5'
-param mgmtVmSize string = 'Standard_B2ms'
+@description('Domain Controller VM size')
+@allowed([
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2ds_v5'
+  'Standard_D4ds_v5'
+  'Standard_D2ads_v5'
+  'Standard_D4ads_v5'
+  'Standard_D2ls_v5'
+  'Standard_D4ls_v5'
+])
+param dcVmSize   string = 'Standard_D2s_v5'
+
+@description('Management jump VM size')
+@allowed([
+  'Standard_B2ms'
+  'Standard_B4ms'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2s_v5'
+  'Standard_D4s_v5'
+  'Standard_D2ds_v5'
+  'Standard_D4ds_v5'
+  'Standard_D2ads_v5'
+  'Standard_D4ads_v5'
+  'Standard_D2ls_v5'
+  'Standard_D4ls_v5'
+])
+param mgmtVmSize string = 'Standard_D2s_v5'
 
 // ---------------------------------------------------------------------------
 // Tagging
