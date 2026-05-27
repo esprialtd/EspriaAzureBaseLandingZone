@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "8890242587959033284"
+      "templateHash": "9447166528420453496"
     }
   },
   "parameters": {
@@ -156,18 +156,57 @@
       }
     },
     "adminUsername": {
-      "type": "string"
+      "type": "string",
+      "defaultValue": "esprialocaladmin",
+      "metadata": {
+        "description": "Admin username for all VMs (DCs, management VM)"
+      }
     },
     "adminPassword": {
-      "type": "securestring"
+      "type": "securestring",
+      "metadata": {
+        "description": "Admin password for all VMs – must meet Azure complexity requirements (12+ chars, upper, lower, number, symbol)"
+      }
     },
     "dcVmSize": {
       "type": "string",
-      "defaultValue": "Standard_D2s_v5"
+      "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D2ads_v5",
+        "Standard_D4ads_v5",
+        "Standard_D2ls_v5",
+        "Standard_D4ls_v5"
+      ],
+      "metadata": {
+        "description": "Domain Controller VM size"
+      }
     },
     "mgmtVmSize": {
       "type": "string",
-      "defaultValue": "Standard_B2ms"
+      "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B4ms",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D2ads_v5",
+        "Standard_D4ads_v5",
+        "Standard_D2ls_v5",
+        "Standard_D4ls_v5"
+      ],
+      "metadata": {
+        "description": "Management jump VM size"
+      }
     },
     "createdBy": {
       "type": "string",

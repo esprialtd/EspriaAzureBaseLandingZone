@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "7852355630563730746"
+      "templateHash": "14029335391252258854"
     }
   },
   "parameters": {
@@ -134,6 +134,17 @@
     "sophosVmSize": {
       "type": "string",
       "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D8s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D8ds_v5",
+        "Standard_F2s_v2",
+        "Standard_F4s_v2",
+        "Standard_F8s_v2"
+      ],
       "metadata": {
         "description": "Sophos XG NVA VM size"
       }
@@ -147,6 +158,7 @@
     },
     "adminUsername": {
       "type": "string",
+      "defaultValue": "esprialocaladmin",
       "metadata": {
         "description": "Admin username for all VMs (DCs, management VM)"
       }
@@ -160,13 +172,39 @@
     "dcVmSize": {
       "type": "string",
       "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D2ads_v5",
+        "Standard_D4ads_v5",
+        "Standard_D2ls_v5",
+        "Standard_D4ls_v5"
+      ],
       "metadata": {
         "description": "Domain Controller VM size"
       }
     },
     "mgmtVmSize": {
       "type": "string",
-      "defaultValue": "Standard_B2ms",
+      "defaultValue": "Standard_D2s_v5",
+      "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B4ms",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2s_v5",
+        "Standard_D4s_v5",
+        "Standard_D2ds_v5",
+        "Standard_D4ds_v5",
+        "Standard_D2ads_v5",
+        "Standard_D4ads_v5",
+        "Standard_D2ls_v5",
+        "Standard_D4ls_v5"
+      ],
       "metadata": {
         "description": "Management jump VM size"
       }
