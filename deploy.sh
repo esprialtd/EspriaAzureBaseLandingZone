@@ -24,7 +24,7 @@ MGMT_GROUPS_ONLY=false
 BOLD="\033[1m"; RED="\033[0;31m"; GREEN="\033[0;32m"; YELLOW="\033[1;33m"; CYAN="\033[0;36m"; RESET="\033[0m"
 
 usage() {
-  echo -e "${BOLD}Espria Azure Landing Zone – Multi-Variant Deploy${RESET}"
+  echo -e "${BOLD}Espria Azure Landing Zone - Multi-Variant Deploy${RESET}"
   echo ""
   echo "Usage: $0 -v <variant> -s <sub-id> -n <name> -a <abbr> -d <domain> [options]"
   echo ""

@@ -22,6 +22,7 @@ param hubVnetName string
 param spokeVnetId string
 
 @description('Short label for this spoke used in the peering name (e.g. identity, management)')
+param spokeLabel string
 
 @description('Allow forwarded traffic from the spoke (required for NVA traffic flow)')
 param allowForwardedTraffic bool = true
