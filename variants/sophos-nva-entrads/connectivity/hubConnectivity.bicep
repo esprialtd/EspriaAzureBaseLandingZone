@@ -16,6 +16,9 @@ param regionAbbreviation string
 param vnetName string
 param addressPrefix string
 
+@description('On-premises address prefix (used by downstream modules / future rules).')
+param onPremAddressPrefix string = '10.1.0.0/16'
+
 @description('2nd octet of the 10.x.0.0/16 address space for this region')
 param siteOctet int
 

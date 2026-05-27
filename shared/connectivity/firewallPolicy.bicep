@@ -149,7 +149,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-DNS-To-DCs'
             description:          'All spokes to Domain Controllers: DNS resolution (UDP+TCP 53)'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      hubSources
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['53']
@@ -158,7 +158,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-DNS-Reply'
             description:          'Domain Controllers DNS replies back to spokes'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      allIdentitySubnets
             destinationAddresses: hubSources
             destinationPorts:     ['53']
@@ -167,7 +167,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-DNS-OnPrem'
             description:          'On-premises DNS queries to DCs (conditional forwarder scenarios)'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      [onPremAddressPrefix]
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['53']
@@ -190,7 +190,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-Kerberos'
             description:          'Kerberos authentication (UDP+TCP 88)'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['88']
@@ -199,7 +199,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-LDAP'
             description:          'LDAP directory queries (UDP+TCP 389)'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['389']
@@ -208,7 +208,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-LDAPS'
             description:          'LDAP over SSL (TCP 636) — required for secure LDAP binding'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['636']
@@ -217,7 +217,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-GlobalCatalog-LDAP'
             description:          'Global Catalog LDAP (TCP 3268) — required for multi-domain forests'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['3268']
@@ -226,7 +226,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-GlobalCatalog-LDAPS'
             description:          'Global Catalog LDAP over SSL (TCP 3269)'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['3269']
@@ -252,7 +252,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-RPC-Endpoint-Mapper'
             description:          'RPC Endpoint Mapper (TCP 135) — required for AD replication and GPO'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['135']
@@ -261,7 +261,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-RPC-Dynamic'
             description:          'RPC dynamic port range (TCP 49152-65535) — AD replication, NETLOGON, DFSR. Restrict further with RPC port locking on DCs in hardened environments.'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['49152-65535']
@@ -270,7 +270,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-SMB-SYSVOL-NETLOGON'
             description:          'SMB (TCP 445) for SYSVOL and NETLOGON share access — Group Policy, scripts'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['445']
@@ -279,7 +279,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NetBIOS'
             description:          'NetBIOS name resolution and session (UDP 137-138, TCP 139) — legacy clients'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['137', '138', '139']
@@ -288,7 +288,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-DFSR'
             description:          'DFSR (TCP 5722) — DFS Replication for SYSVOL (Windows Server 2008+)'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      allIdentitySubnets   // DC-to-DC replication
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['5722']
@@ -297,7 +297,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NTP-From-DCs'
             description:          'NTP (UDP 123) — DCs as authoritative time source for domain members'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['123']
@@ -306,7 +306,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-DC-Replication-Outbound'
             description:          'Allow DCs to initiate replication to other DCs (includes secondary region)'
-            protocols:            ['TCP']
+            ipProtocols:          ['TCP']
             sourceAddresses:      allIdentitySubnets
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['135', '389', '636', '3268', '3269', '445', '49152-65535']
@@ -317,7 +317,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NTP-EntraDS'
             description:          'NTP (UDP 123) — managed domain time synchronisation'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      concat(hubSources, [onPremAddressPrefix])
             destinationAddresses: allIdentitySubnets
             destinationPorts:     ['123']
@@ -336,7 +336,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-ADDS-Return-To-Clients'
             description:          'Return traffic from DCs back to management and connectivity spokes'
-            protocols:            ['UDP', 'TCP']
+            ipProtocols:          ['UDP', 'TCP']
             sourceAddresses:      allIdentitySubnets
             destinationAddresses: hubSources
             destinationPorts:     ['*']
@@ -358,7 +358,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-SNMP-Poll-Conn-To-Mgmt'
             description:          'SNMP polling (UDP 161) from connectivity subnet to management subnet — NVA and device health'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allConnSubnets
             destinationAddresses: allMgmtSubnets
             destinationPorts:     ['161']
@@ -367,7 +367,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-SNMP-Trap-Mgmt-To-Conn'
             description:          'SNMP traps (UDP 162) from management to connectivity — alerts from managed devices'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allMgmtSubnets
             destinationAddresses: allConnSubnets
             destinationPorts:     ['162']
@@ -376,7 +376,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-SNMP-Poll-Mgmt-To-Conn'
             description:          'SNMP polling (UDP 161) from management to connectivity — management VM polls NVA/firewall health'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allMgmtSubnets
             destinationAddresses: allConnSubnets
             destinationPorts:     ['161']
@@ -403,7 +403,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NetFlow-Conn-To-Mgmt'
             description:          'NetFlow v5/v9 (UDP 2055) and IPFIX (UDP 4739) from connectivity devices to management collector'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allConnSubnets
             destinationAddresses: allMgmtSubnets
             destinationPorts:     ['2055', '4739']
@@ -412,7 +412,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NetFlow-Legacy-Port'
             description:          'NetFlow legacy port UDP 9996 — some NVA platforms default to this'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allConnSubnets
             destinationAddresses: allMgmtSubnets
             destinationPorts:     ['9996']
@@ -421,7 +421,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-sFlow-Conn-To-Mgmt'
             description:          'sFlow UDP 6343 from connectivity subnet to management collector'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allConnSubnets
             destinationAddresses: allMgmtSubnets
             destinationPorts:     ['6343']
@@ -430,7 +430,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:             'NetworkRule'
             name:                 'Allow-NetFlow-Mgmt-Internal'
             description:          'NetFlow collector intra-management traffic — collector acknowledgements and internal flow data'
-            protocols:            ['UDP']
+            ipProtocols:          ['UDP']
             sourceAddresses:      allMgmtSubnets
             destinationAddresses: allMgmtSubnets
             destinationPorts:     ['2055', '4739', '9996']
@@ -452,7 +452,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:         'ApplicationRule'
             name:             'Allow-WindowsUpdate-DCs'
             description:      'Windows Update and Microsoft Update for Domain Controllers and MGMT VMs'
-            protocols:        [{ protocolType: 'Https', port: 443 }]
+            protocols:      [{ protocolType: 'Https', port: 443 }]
             sourceAddresses:  concat(allIdentitySubnets, allMgmtSubnets)
             targetFqdns: [
               '*.update.microsoft.com'
@@ -472,7 +472,7 @@ resource rcgPlatformCore 'Microsoft.Network/firewallPolicies/ruleCollectionGroup
             ruleType:         'ApplicationRule'
             name:             'Allow-NTP-Time-Windows'
             description:      'Windows Time Service NTP to time.windows.com'
-            protocols:        [{ protocolType: 'Http', port: 80 }]
+            protocols:      [{ protocolType: 'Http', port: 80 }]
             sourceAddresses:  concat(allIdentitySubnets, allMgmtSubnets)
             targetFqdns:      ['time.windows.com']
           }
@@ -505,7 +505,7 @@ resource rcgDenyAll 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@202
             ruleType:             'NetworkRule'
             name:                 'Deny-All-Internal'
             description:          'Catch-all deny for any internal traffic not explicitly allowed. Review firewall logs before tightening.'
-            protocols:            ['Any']
+            ipProtocols:          ['Any']
             sourceAddresses:      ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
             destinationAddresses: ['10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16']
             destinationPorts:     ['*']
