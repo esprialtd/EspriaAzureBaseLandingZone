@@ -51,10 +51,7 @@ resource rsv 'Microsoft.RecoveryServices/vaults@2023-06-01' = {
   }
   properties: {
     publicNetworkAccess: 'Enabled'
-    redundancySettings: {
-      standardTierStorageRedundancy: 'ZoneRedundant'
-      crossRegionRestore:            'Disabled'
-    }
+    // redundancySettings are controlled via SKU and cannot be set as properties
     securitySettings: {
       softDeleteSettings: {
         softDeleteState:              'AlwaysON'
@@ -136,7 +133,7 @@ resource vmBackupPolicy 'Microsoft.RecoveryServices/vaults/backupPolicies@2023-0
           daysOfTheWeek: ['Sunday']
           weeksOfTheMonth: ['First']
         }
-        retentionMonthsOfYear: ['January']
+        monthsOfYear: ['January']
         retentionTimes: ['2000-01-01T22:00:00Z']
         retentionDuration: {
           count:        1
@@ -175,7 +172,6 @@ resource vmBackupItems 'Microsoft.RecoveryServices/vaults/backupFabrics/protecti
       }
     }
   }
-  dependsOn: [rsv, vmBackupPolicy]
 }]
 
 // ---------------------------------------------------------------------------
@@ -254,7 +250,6 @@ resource diskBackupPolicy 'Microsoft.DataProtection/backupVaults/backupPolicies@
       {
         objectType:       'AzureBackupRule'
         name:             'BackupHourly'
-        isDefault:        true
         backupParameters: {
           objectType:   'AzureBackupParams'
           backupType:   'Incremental'
@@ -276,7 +271,6 @@ resource diskBackupPolicy 'Microsoft.DataProtection/backupVaults/backupPolicies@
               isDefault: true
               tagInfo: {
                 tagName: 'Default'
-                id:      'Default_'
               }
               taggingPriority: 99
             }

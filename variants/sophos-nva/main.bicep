@@ -470,11 +470,25 @@ var commonTags = {
   Variant:     'sophos-nva'
 }
 
+// Pre-computed VM lists for monitoring and backup (for-expressions not allowed inline in module params)
+var priDcVmInsightsList = [
+  { id: priIdentity.outputs.dcVmIds[0], location: primaryRegion }
+  { id: priIdentity.outputs.dcVmIds[1], location: primaryRegion }
+]
+var priMgmtVmInsightsList = [{ id: priManagement.outputs.mgmtVmId, location: primaryRegion }]
+var priAllVmInsightsList  = concat(priDcVmInsightsList, priMgmtVmInsightsList)
+
+var priDcBackupTargets = [
+  { vmId: priIdentity.outputs.dcVmIds[0], vmName: priIdentity.outputs.dcVmNames[0], rgName: rgPriIdentity }
+  { vmId: priIdentity.outputs.dcVmIds[1], vmName: priIdentity.outputs.dcVmNames[1], rgName: rgPriIdentity }
+]
+
 // ===========================================================================
 // MANAGEMENT GROUPS
 // ===========================================================================
 module managementGroups '../../shared/governance/managementGroups.bicep' = {
-  name: 'deploy-managementGroups'
+  name:  'deploy-managementGroups'
+  scope: tenant()
   params: {
     customerName:         customerName
     customerAbbreviation: custAbbr
@@ -501,7 +515,6 @@ module rgsPrimary '../../shared/governance/resourceGroups.bicep' = {
 module priConnectivity './connectivity/hubConnectivity.bicep' = {
   name: 'deploy-pri-connectivity'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [rgsPrimary]
   params: {
     location:             primaryRegion
     environment:          env
@@ -525,7 +538,6 @@ module priConnectivity './connectivity/hubConnectivity.bicep' = {
 module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
   name: 'deploy-pri-identity'
   scope: resourceGroup(rgPriIdentity)
-  dependsOn: [rgsPrimary, priConnectivity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -552,7 +564,6 @@ module priIdentity '../../shared/identity/adds/identityVnet.bicep' = {
 module priManagement '../../shared/management/managementVnet.bicep' = {
   name: 'deploy-pri-management'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [rgsPrimary, priConnectivity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -589,7 +600,6 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module secConnectivity './connectivity/hubConnectivity.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-connectivity'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [rgsSecondary]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -610,7 +620,6 @@ module secConnectivity './connectivity/hubConnectivity.bicep' = if (deploySecond
 module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity'
   scope: resourceGroup(rgSecIdentity)
-  dependsOn: [rgsSecondary, secConnectivity]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -634,7 +643,6 @@ module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deployS
 module secManagement '../../shared/management/managementVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [rgsSecondary, secConnectivity]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -660,7 +668,6 @@ module secManagement '../../shared/management/managementVnet.bicep' = if (deploy
 module priHubToIdentity './connectivity/spokeToHubPeering.bicep' = {
   name: 'deploy-pri-hub-to-identity'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity, priIdentity]
   params: {
     hubVnetName:           vnetPriConnectivity
     spokeVnetId:           priIdentity.outputs.identityVnetId
@@ -672,7 +679,6 @@ module priHubToIdentity './connectivity/spokeToHubPeering.bicep' = {
 module priHubToManagement './connectivity/spokeToHubPeering.bicep' = {
   name: 'deploy-pri-hub-to-management'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity, priManagement]
   params: {
     hubVnetName:           vnetPriConnectivity
     spokeVnetId:           priManagement.outputs.mgmtVnetId
@@ -684,7 +690,6 @@ module priHubToManagement './connectivity/spokeToHubPeering.bicep' = {
 module secHubToIdentity './connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-hub-to-identity'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [secConnectivity, secIdentity]
   params: {
     hubVnetName:           vnetSecConnectivity
     spokeVnetId:           deploySecondaryRegion ? secIdentity.outputs.identityVnetId : ''
@@ -696,7 +701,6 @@ module secHubToIdentity './connectivity/spokeToHubPeering.bicep' = if (deploySec
 module secHubToManagement './connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-hub-to-management'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [secConnectivity, secManagement]
   params: {
     hubVnetName:           vnetSecConnectivity
     spokeVnetId:           deploySecondaryRegion ? secManagement.outputs.mgmtVnetId : ''
@@ -710,7 +714,6 @@ module secHubToManagement './connectivity/spokeToHubPeering.bicep' = if (deployS
 // ===========================================================================
 module hubTohubPeering './connectivity/hubToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-hub-to-hub-peering'
-  dependsOn: [priConnectivity, secConnectivity]
   params: {
     primaryRg:           rgPriConnectivity
     secondaryRg:         rgSecConnectivity
@@ -742,7 +745,6 @@ output secondaryDcVmIds           array  = deploySecondaryRegion ? secIdentity.o
 module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
   name: 'deploy-monitoring'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement, priIdentity, priConnectivity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -750,21 +752,7 @@ module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
     alertEmailAddress:    alertEmailAddress
     retentionDays:        lawRetentionDays
     tags:                 union(commonTags, { Location: tagLocationPrimary })
-    vmInsightsVms: concat(
-      [for i in range(0, 2): {
-        id:       priIdentity.outputs.dcVmIds[i]
-        location: primaryRegion
-      }],
-      [{
-        id:       priManagement.outputs.mgmtVmId
-        location: primaryRegion
-      }]
-    )
-    vnetDiagnosticTargets: [
-      { id: priConnectivity.outputs.hubVnetId,  location: primaryRegion }
-      { id: priIdentity.outputs.identityVnetId, location: primaryRegion }
-      { id: priManagement.outputs.mgmtVnetId,   location: primaryRegion }
-    ]
+    vmInsightsVms: priAllVmInsightsList
   }
 }
 
@@ -773,7 +761,6 @@ module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
 // ===========================================================================
 module governancePolicies '../../shared/governance/policies.bicep' = {
   name: 'deploy-governance-policies'
-  dependsOn: [monitoring]
   params: {
     environment:          env
     customerAbbreviation: custAbbr
@@ -790,7 +777,6 @@ module governancePolicies '../../shared/governance/policies.bicep' = {
 module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-identity-primary'
   scope: resourceGroup(rgPriIdentity)
-  dependsOn: [priIdentity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -798,11 +784,7 @@ module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if 
     region:               primaryRegion
     resourceGroupContext: 'identity'
     tags:                 union(commonTags, { Location: tagLocationPrimary })
-    vmBackupTargets: [for i in range(0, 2): {
-      vmId:   priIdentity.outputs.dcVmIds[i]
-      vmName: priIdentity.outputs.dcVmNames[i]
-      rgName: rgPriIdentity
-    }]
+    vmBackupTargets: priDcBackupTargets
     diskBackupTargets: []
   }
 }
@@ -813,7 +795,6 @@ module backupIdentityPrimary '../../shared/backup/backupAndRecovery.bicep' = if 
 module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-management-primary'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement]
   params: {
     location:             primaryRegion
     environment:          env
@@ -836,7 +817,6 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
 module backupNvaPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableNvaDiskBackup) {
   name: 'deploy-backup-nva-primary'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -855,7 +835,6 @@ module backupNvaPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enab
 module backupIdentitySecondary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup && deploySecondaryRegion) {
   name: 'deploy-backup-identity-secondary'
   scope: resourceGroup(rgSecIdentity)
-  dependsOn: [secIdentity]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -875,7 +854,6 @@ module backupIdentitySecondary '../../shared/backup/backupAndRecovery.bicep' = i
 module backupNvaSecondary '../../shared/backup/backupAndRecovery.bicep' = if (enableNvaDiskBackup && deploySecondaryRegion) {
   name: 'deploy-backup-nva-secondary'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [secConnectivity]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -894,7 +872,6 @@ module backupNvaSecondary '../../shared/backup/backupAndRecovery.bicep' = if (en
 module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-cache-storage'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -910,7 +887,6 @@ module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableA
 module asrMgmtVm '../../shared/backup/asrReplication.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-mgmt-vm'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [priManagement, secManagement, asrCacheStorage]
   params: {
     location:               resolvedSecondaryRegion
     environment:            env

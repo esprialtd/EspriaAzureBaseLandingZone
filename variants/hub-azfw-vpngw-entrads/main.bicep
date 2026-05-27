@@ -232,11 +232,16 @@ var commonTags = {
   Variant:     'hub-azfw-vpngw-entrads'
 }
 
+// Pre-computed VM lists for monitoring (Entra DS has no DC VMs)
+var priMgmtVmInsightsList = [{ id: priManagement.outputs.mgmtVmId, location: primaryRegion }]
+var priAllVmInsightsList  = priMgmtVmInsightsList
+
 // ===========================================================================
 // MANAGEMENT GROUPS + RESOURCE GROUPS (shared)
 // ===========================================================================
 module managementGroups '../../shared/governance/managementGroups.bicep' = {
-  name: 'deploy-managementGroups'
+  name:  'deploy-managementGroups'
+  scope: tenant()
   params: { customerName: customerName, customerAbbreviation: custAbbr }
 }
 
@@ -262,7 +267,6 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module priConnectivity './connectivity/hubConnectivityAzfw.bicep' = {
   name: 'deploy-pri-connectivity'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [rgsPrimary]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: priAbbr
@@ -280,7 +284,6 @@ module priConnectivity './connectivity/hubConnectivityAzfw.bicep' = {
 module secConnectivity './connectivity/hubConnectivityAzfw.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-connectivity'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [rgsSecondary]
   params: {
     location: resolvedSecondaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: secAbbr
@@ -301,7 +304,6 @@ module secConnectivity './connectivity/hubConnectivityAzfw.bicep' = if (deploySe
 module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
   name: 'deploy-pri-identity'
   scope: resourceGroup(rgPriIdentity)
-  dependsOn: [rgsPrimary, priConnectivity]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: priAbbr
@@ -320,7 +322,6 @@ module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
 module priManagement '../../shared/management/managementVnet.bicep' = {
   name: 'deploy-pri-management'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [rgsPrimary, priConnectivity]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: priAbbr
@@ -337,7 +338,6 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
 module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity'
   scope: resourceGroup(rgSecIdentity)
-  dependsOn: [rgsSecondary, secConnectivity]
   params: {
     location: resolvedSecondaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: secAbbr
@@ -356,7 +356,6 @@ module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = i
 module secManagement '../../shared/management/managementVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [rgsSecondary, secConnectivity]
   params: {
     location: resolvedSecondaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: secAbbr
@@ -376,7 +375,6 @@ module secManagement '../../shared/management/managementVnet.bicep' = if (deploy
 module priHubToIdentity './connectivity/spokeToHubPeering.bicep' = {
   name: 'deploy-pri-hub-to-identity'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity, priIdentity]
   params: {
     hubVnetName: vnetPriConnectivity, spokeVnetId: priIdentity.outputs.identityVnetId
     spokeLabel: 'identity', allowForwardedTraffic: true
@@ -386,7 +384,6 @@ module priHubToIdentity './connectivity/spokeToHubPeering.bicep' = {
 module priHubToManagement './connectivity/spokeToHubPeering.bicep' = {
   name: 'deploy-pri-hub-to-management'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [priConnectivity, priManagement]
   params: {
     hubVnetName: vnetPriConnectivity, spokeVnetId: priManagement.outputs.mgmtVnetId
     spokeLabel: 'management', allowForwardedTraffic: true
@@ -396,7 +393,6 @@ module priHubToManagement './connectivity/spokeToHubPeering.bicep' = {
 module secHubToIdentity './connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-hub-to-identity'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [secConnectivity, secIdentity]
   params: {
     hubVnetName: vnetSecConnectivity
     spokeVnetId: deploySecondaryRegion ? secIdentity.outputs.identityVnetId : ''
@@ -407,7 +403,6 @@ module secHubToIdentity './connectivity/spokeToHubPeering.bicep' = if (deploySec
 module secHubToManagement './connectivity/spokeToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-hub-to-management'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [secConnectivity, secManagement]
   params: {
     hubVnetName: vnetSecConnectivity
     spokeVnetId: deploySecondaryRegion ? secManagement.outputs.mgmtVnetId : ''
@@ -417,7 +412,6 @@ module secHubToManagement './connectivity/spokeToHubPeering.bicep' = if (deployS
 
 module hubToHub './connectivity/hubToHubPeering.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-hub-to-hub-peering'
-  dependsOn: [priConnectivity, secConnectivity]
   params: {
     primaryHubVnetId:    priConnectivity.outputs.hubVnetId
     secondaryHubVnetId:  deploySecondaryRegion ? secConnectivity.outputs.hubVnetId : ''
@@ -432,26 +426,16 @@ module hubToHub './connectivity/hubToHubPeering.bicep' = if (deploySecondaryRegi
 module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
   name: 'deploy-monitoring'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement, priIdentity, priConnectivity]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, alertEmailAddress: alertEmailAddress
     retentionDays: lawRetentionDays, tags: commonTags
-    vmInsightsVms: concat(
-      [for i in range(0, 2): { id: priIdentity.outputs.dcVmIds[i], location: primaryRegion }],
-      [{ id: priManagement.outputs.mgmtVmId, location: primaryRegion }]
-    )
-    vnetDiagnosticTargets: [
-      { id: priConnectivity.outputs.hubVnetId, location: primaryRegion }
-      { id: priIdentity.outputs.identityVnetId, location: primaryRegion }
-      { id: priManagement.outputs.mgmtVnetId, location: primaryRegion }
-    ]
+    vmInsightsVms: priAllVmInsightsList
   }
 }
 
 module governancePolicies '../../shared/governance/policies.bicep' = {
   name: 'deploy-governance-policies'
-  dependsOn: [monitoring]
   params: {
     environment: env, customerAbbreviation: custAbbr
     primaryRegion: primaryRegion, secondaryRegion: resolvedSecondaryRegion
@@ -465,7 +449,6 @@ module governancePolicies '../../shared/governance/policies.bicep' = {
 module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-management-primary'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, region: primaryRegion
@@ -482,7 +465,6 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
 module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-cache-storage'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [rgsPrimary]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbrLo, region: primaryRegion, tags: commonTags
@@ -492,7 +474,6 @@ module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableA
 module asrMgmtVm '../../shared/backup/asrReplication.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-mgmt-vm'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [priManagement, secManagement, asrCacheStorage]
   params: {
     location: resolvedSecondaryRegion, environment: env
     customerAbbreviation: custAbbr, region: resolvedSecondaryRegion

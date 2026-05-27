@@ -28,6 +28,8 @@ param adminPassword string
 param dcCount int = 2
 
 param dcVmSize string = 'Standard_D2s_v5'
+#disable-next-line no-unused-params
+@description('AD domain name. Used for DC promotion post-deployment and tagging.')
 param customerDomainName string
 param tags object
 
@@ -204,8 +206,9 @@ resource identityVnet 'Microsoft.Network/virtualNetworks@2023-06-01' = {
 // ---------------------------------------------------------------------------
 // Hub peering: Identity spoke → Hub (spoke uses hub for egress)
 // ---------------------------------------------------------------------------
-resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-06-01' = {
-  name: '${vnetName}/link-to-${last(split(hubVnetId, '/'))}'
+resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-06-01' = if (!empty(hubVnetId)) {
+  parent: identityVnet
+  name:   'link-to-${last(split(hubVnetId, '/'))}'
   properties: {
     remoteVirtualNetwork:      { id: hubVnetId }
     allowVirtualNetworkAccess: true
@@ -213,7 +216,6 @@ resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@202
     useRemoteGateways:         false
     allowGatewayTransit:       false
   }
-  dependsOn: [identityVnet]
 }
 
 // ---------------------------------------------------------------------------

@@ -253,11 +253,16 @@ var commonTags = {
   Variant:     'vwan-azfw-entrads'
 }
 
+// Pre-computed VM lists for monitoring (Entra DS has no DC VMs)
+var priMgmtVmInsightsList = [{ id: priManagement.outputs.mgmtVmId, location: primaryRegion }]
+var priAllVmInsightsList  = priMgmtVmInsightsList
+
 // ===========================================================================
 // MANAGEMENT GROUPS (shared)
 // ===========================================================================
 module managementGroups '../../shared/governance/managementGroups.bicep' = {
-  name: 'deploy-managementGroups'
+  name:  'deploy-managementGroups'
+  scope: tenant()
   params: {
     customerName:         customerName
     customerAbbreviation: custAbbr
@@ -295,7 +300,6 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module vwan './connectivity/virtualWan.bicep' = {
   name: 'deploy-vwan'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [rgsPrimary]
   params: {
     location:             primaryRegion
     environment:          env
@@ -310,7 +314,6 @@ module vwan './connectivity/virtualWan.bicep' = {
 module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-identity-spoke'
   scope: resourceGroup(rgPriIdentity)
-  dependsOn: [rgsPrimary]
   params: {
     location:             primaryRegion
     environment:          env
@@ -328,7 +331,6 @@ module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-management-spoke'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [rgsPrimary]
   params: {
     location:             primaryRegion
     environment:          env
@@ -346,7 +348,6 @@ module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity-spoke'
   scope: resourceGroup(rgSecIdentity)
-  dependsOn: [rgsSecondary]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -364,7 +365,6 @@ module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySec
 module secManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management-spoke'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [rgsSecondary]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -385,7 +385,6 @@ module secManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deployS
 module priVwanHub './connectivity/vwanHub.bicep' = {
   name: 'deploy-pri-vwan-hub'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [vwan, priIdentitySpokeVnet, priManagementSpokeVnet]
   params: {
     location:           primaryRegion
     environment:        env
@@ -409,7 +408,6 @@ module priVwanHub './connectivity/vwanHub.bicep' = {
 module secVwanHub './connectivity/vwanHub.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-vwan-hub'
   scope: resourceGroup(rgSecConnectivity)
-  dependsOn: [vwan, secIdentitySpokeVnet, secManagementSpokeVnet]
   params: {
     location:           resolvedSecondaryRegion
     environment:        env
@@ -439,7 +437,6 @@ module secVwanHub './connectivity/vwanHub.bicep' = if (deploySecondaryRegion) {
 module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
   name: 'deploy-pri-identity'
   scope: resourceGroup(rgPriIdentity)
-  dependsOn: [priVwanHub, priIdentitySpokeVnet]
   params: {
     location:             primaryRegion
     environment:          env
@@ -465,7 +462,6 @@ module priIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = {
 module priManagement '../../shared/management/managementVnet.bicep' = {
   name: 'deploy-pri-management'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priVwanHub, priManagementSpokeVnet]
   params: {
     location:             primaryRegion
     environment:          env
@@ -488,7 +484,6 @@ module priManagement '../../shared/management/managementVnet.bicep' = {
 module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity'
   scope: resourceGroup(rgSecIdentity)
-  dependsOn: [secVwanHub, secIdentitySpokeVnet]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -514,7 +509,6 @@ module secIdentity '../../shared/identity/entrads/entraDomainServices.bicep' = i
 module secManagement '../../shared/management/managementVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [secVwanHub, secManagementSpokeVnet]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -540,7 +534,6 @@ module secManagement '../../shared/management/managementVnet.bicep' = if (deploy
 module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
   name: 'deploy-monitoring'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement, priIdentity]
   params: {
     location:             primaryRegion
     environment:          env
@@ -548,14 +541,7 @@ module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
     alertEmailAddress:    alertEmailAddress
     retentionDays:        lawRetentionDays
     tags:                 commonTags
-    vmInsightsVms: concat(
-      [for i in range(0, 2): { id: priIdentity.outputs.dcVmIds[i], location: primaryRegion }],
-      [{ id: priManagement.outputs.mgmtVmId, location: primaryRegion }]
-    )
-    vnetDiagnosticTargets: [
-      { id: priIdentitySpokeVnet.outputs.vnetId,   location: primaryRegion }
-      { id: priManagementSpokeVnet.outputs.vnetId, location: primaryRegion }
-    ]
+    vmInsightsVms: priAllVmInsightsList
   }
 }
 
@@ -564,7 +550,6 @@ module monitoring '../../shared/monitoring/centralMonitoring.bicep' = {
 // ===========================================================================
 module governancePolicies '../../shared/governance/policies.bicep' = {
   name: 'deploy-governance-policies'
-  dependsOn: [monitoring]
   params: {
     environment:          env
     customerAbbreviation: custAbbr
@@ -584,7 +569,6 @@ module governancePolicies '../../shared/governance/policies.bicep' = {
 module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = if (enableVmBackup) {
   name: 'deploy-backup-management-primary'
   scope: resourceGroup(rgPriManagement)
-  dependsOn: [priManagement]
   params: {
     location:             primaryRegion
     environment:          env
@@ -604,7 +588,6 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
 module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-cache-storage'
   scope: resourceGroup(rgPriConnectivity)
-  dependsOn: [rgsPrimary]
   params: {
     location:             primaryRegion
     environment:          env
@@ -617,7 +600,6 @@ module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableA
 module asrMgmtVm '../../shared/backup/asrReplication.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-mgmt-vm'
   scope: resourceGroup(rgSecManagement)
-  dependsOn: [priManagement, secManagement, asrCacheStorage]
   params: {
     location:               resolvedSecondaryRegion
     environment:            env

@@ -42,11 +42,24 @@ Six-variant, multi-region Azure Landing Zone for Espria-managed customers. Three
 
 ### About the azuredeploy.json files
 
-The `azuredeploy.json` in each variant folder is a pre-built ARM template. It renders the portal parameter form for the Deploy-to-Azure button and passes all parameters through to the Bicep deployment. **You do not need to run `az bicep build` to use these files.** They are maintained in the repository alongside the Bicep source. If you modify a variant's `main.bicep`, regenerate its `azuredeploy.json` by running:
+The `azuredeploy.json` in each variant folder is a **fully compiled ARM template** built from the variant's `main.bicep`. When used with the Deploy-to-Azure button, it deploys the complete Landing Zone infrastructure through the Azure portal — no CLI or DevOps pipeline required.
+
+**These files must be compiled from Bicep before the Deploy-to-Azure button will deploy real infrastructure.** The repo includes a build script for this:
 
 ```bash
-az bicep build --file variants/<variant>/main.bicep --outfile variants/<variant>/azuredeploy.json
+# One-time setup
+az bicep install
+
+# Build all six variants (run this after any Bicep change, then commit the output)
+./build-arm.sh
+
+# Build one variant only
+./build-arm.sh -v sophos-nva
 ```
+
+The DevOps pipeline (`azure-pipelines.yaml`) runs `build-arm.sh` automatically on every merge to `main` and commits the updated `azuredeploy.json` files back to the repo, so the Deploy-to-Azure buttons stay current without manual steps.
+
+> **Note:** The `azuredeploy.json` files shipped in the repository are parameter-form wrappers until `build-arm.sh` has been run at least once. After your first `./build-arm.sh && git push`, they become fully functional Deploy-to-Azure templates.
 
 ---
 

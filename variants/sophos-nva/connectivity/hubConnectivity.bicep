@@ -24,12 +24,10 @@ param sophosImageVersion string = 'latest'
 param adminUsername string
 @secure()
 param adminPassword string
-param onPremAddressPrefix string = '10.1.0.0/16'
 param tags object
 
 var custAbbr = toUpper(customerAbbreviation)
 var regAbbr  = toUpper(regionAbbreviation)
-var env      = environment
 
 // Subnet prefixes derived from site octet (10.{siteOctet}.x.y)
 var subnetNvaLan       = '10.${siteOctet}.0.0/27'    // NVALAN

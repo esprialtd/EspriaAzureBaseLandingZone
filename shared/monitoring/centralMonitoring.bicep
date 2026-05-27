@@ -229,21 +229,13 @@ resource dcrAssociation 'Microsoft.Insights/dataCollectionRuleAssociations@2023-
 }]
 
 // ---------------------------------------------------------------------------
-// Diagnostic settings for Virtual Networks
-// Deployed as a loop over vnetDiagnosticTargets.
-// Each VNet is in this same subscription; the diagnostic setting resource
-// is an extension resource deployed via the ARM resourceId of the VNet.
+// VNet Diagnostic Settings
+// DiagnosticSettings on VNets in other resource groups require cross-scope
+// deployment which must be done from each VNet's own resource group module.
+// The NSGs and VNets in connectivity/identity/management RGs attach to this
+// LAW via the diagnosticSettings child resource deployed in their own modules.
+// LAW resource ID is available via the lawId output below.
 // ---------------------------------------------------------------------------
-resource vnetDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = [for vnet in vnetDiagnosticTargets: {
-  name: 'diag-vnet-to-law'
-  scope: resourceGroup(split(vnet.id, '/')[4])  // Target VNet's resource group
-  properties: {
-    workspaceId: law.id
-    metrics: [
-      { category: 'AllMetrics', enabled: true, retentionPolicy: { enabled: false, days: 0 } }
-    ]
-  }
-}]
 
 // ---------------------------------------------------------------------------
 // Outputs

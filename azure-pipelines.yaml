@@ -99,10 +99,54 @@ stages:
             env:
               ADMIN_PASSWORD: $(ADMIN_PASSWORD)
 
+# ── Stage 1b: Build ARM Templates ───────────────────────────────────────────
+# Compiles all six variant main.bicep → azuredeploy.json and commits back.
+# Required for Deploy-to-Azure buttons to deploy real infrastructure.
+# Only runs on main branch merges (not PRs — what-if covers those).
+  - stage: BuildARM
+    displayName: '1b – Build ARM Templates (all variants)'
+    dependsOn: Validate
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: CompileAndCommit
+        pool: { vmImage: 'ubuntu-latest' }
+        steps:
+          - checkout: self
+            persistCredentials: true
+
+          - task: AzureCLI@2
+            displayName: 'Install Bicep'
+            inputs:
+              azureSubscription: 'sc-espria-lz-subscription'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: az bicep install
+
+          - task: AzureCLI@2
+            displayName: 'Build all 6 azuredeploy.json'
+            inputs:
+              azureSubscription: 'sc-espria-lz-subscription'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: chmod +x build-arm.sh && ./build-arm.sh
+
+          - script: |
+              git config user.email "espria-lz-pipeline@espria.com"
+              git config user.name  "Espria LZ Pipeline"
+              git add variants/*/azuredeploy.json
+              if git diff --cached --quiet; then
+                echo "No ARM template changes — nothing to commit"
+              else
+                git commit -m "ci: rebuild azuredeploy.json from Bicep [skip ci]"
+                git push origin HEAD:$(Build.SourceBranchName)
+                echo "ARM templates committed and pushed"
+              fi
+            displayName: 'Commit updated ARM templates'
+
 # ── Stage 2: Management Groups ───────────────────────────────────────────────
   - stage: ManagementGroups
     displayName: '2 – Management Groups'
-    dependsOn: Validate
+    dependsOn: BuildARM
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
     jobs:
       - deployment: DeployMGs

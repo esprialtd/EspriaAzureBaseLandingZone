@@ -15,8 +15,7 @@ param addressPrefix string
 param siteOctet int
 param hubVnetId string
 
-@description('AzureBastionSubnet resource ID from the connectivity VNet. '
-  + 'Bastion must attach to the connectivity VNet subnet to reach all peered spokes.')
+@description('AzureBastionSubnet resource ID from the connectivity VNet. Bastion attaches to the hub VNet subnet to reach all peered spokes. Pass empty string for vWAN variant where Bastion is in the management spoke.')
 param bastionSubnetId string
 
 param nextHopIp string
@@ -160,8 +159,9 @@ resource mgmtVnet 'Microsoft.Network/virtualNetworks@2023-06-01' = {
 // ---------------------------------------------------------------------------
 // Hub peering: Management spoke → Hub
 // ---------------------------------------------------------------------------
-resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-06-01' = {
-  name: '${vnetName}/link-to-${last(split(hubVnetId, '/'))}'
+resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@2023-06-01' = if (!empty(hubVnetId)) {
+  parent: mgmtVnet
+  name:   'link-to-${last(split(hubVnetId, '/'))}'
   properties: {
     remoteVirtualNetwork:      { id: hubVnetId }
     allowVirtualNetworkAccess: true
@@ -169,7 +169,6 @@ resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@202
     useRemoteGateways:         false
     allowGatewayTransit:       false
   }
-  dependsOn: [mgmtVnet]
 }
 
 // ---------------------------------------------------------------------------

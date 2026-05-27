@@ -149,7 +149,7 @@ resource replicationPolicy 'Microsoft.RecoveryServices/vaults/replicationPolicie
   name: policyName
   properties: {
     providerSpecificInput: {
-      instanceType:                     'A2APolicyCreationInput'
+      instanceType:                     'A2A'
       recoveryPointHistory:             1440   // 24 hours of recovery points
       crashConsistentFrequencyInMinutes: 5
       appConsistentFrequencyInMinutes:   240   // 4 hours
@@ -168,7 +168,7 @@ resource containerMapping 'Microsoft.RecoveryServices/vaults/replicationFabrics/
     targetProtectionContainerId: targetContainer.id
     policyId:                    replicationPolicy.id
     providerSpecificInput: {
-      instanceType: 'A2AContainerMappingInput'
+      instanceType: 'A2A'
       agentAutoUpdateStatus: 'Enabled'
     }
   }
@@ -210,7 +210,6 @@ resource replicatedItem 'Microsoft.RecoveryServices/vaults/replicationFabrics/re
       vmManagedDisks: [
         {
           diskId:                           sourceVmOsDiskId
-          primaryStagingAzureStorageAccountId: cacheStorageAccountId
           recoveryResourceGroupId:          resourceGroup().id
           recoveryReplicaDiskAccountType:   'Premium_LRS'
           recoveryTargetDiskAccountType:    'Premium_LRS'
