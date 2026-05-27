@@ -290,8 +290,8 @@ resource sophosNva 'Microsoft.Compute/virtualMachines@2023-09-01' = {
       }
       osDisk: {
         createOption:       'FromImage'
-        managedDisk:        { storageAccountType: 'Premium_LRS' }
-        diskSizeGB:         30
+        managedDisk:        { storageAccountType: 'StandardSSD_LRS' }
+        diskSizeGB:         32
         deleteOption:       'Delete'
       }
     }
