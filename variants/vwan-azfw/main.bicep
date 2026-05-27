@@ -474,6 +474,7 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module vwan './connectivity/virtualWan.bicep' = {
   name: 'deploy-vwan'
   scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [ rgsPrimary, rgsSecondary ]  // ensure RGs exist before deploying the global vWAN resource
   params: {
     location:             primaryRegion
     environment:          env
@@ -488,6 +489,7 @@ module vwan './connectivity/virtualWan.bicep' = {
 module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-identity-spoke'
   scope: resourceGroup(rgPriIdentity)
+  dependsOn: [ vwan ]  // ensure vwan exists before deploying spoke VNet  
   params: {
     location:             primaryRegion
     environment:          env
@@ -505,6 +507,7 @@ module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-management-spoke'
   scope: resourceGroup(rgPriManagement)
+  dependsOn: [ vwan ]  // ensure vwan exists before deploying spoke VNet 
   params: {
     location:             primaryRegion
     environment:          env
@@ -522,6 +525,7 @@ module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity-spoke'
   scope: resourceGroup(rgSecIdentity)
+  dependsOn: [ vwan ]  // ensure vwan exists before deploying spoke VNet 
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -539,6 +543,7 @@ module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySec
 module secManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management-spoke'
   scope: resourceGroup(rgSecManagement)
+  dependsOn: [ vwan ]  // ensure vwan exists before deploying spoke VNet 
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -770,6 +775,7 @@ module backupManagementPrimary '../../shared/backup/backupAndRecovery.bicep' = i
 module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-cache-storage'
   scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [ vwan ]  // ensure vwan exists before deploying cache storage (for ASR replication of management VM)
   params: {
     location:             primaryRegion
     environment:          env
@@ -782,6 +788,7 @@ module asrCacheStorage '../../shared/backup/asrCacheStorage.bicep' = if (enableA
 module asrMgmtVm '../../shared/backup/asrReplication.bicep' = if (enableAsrMgmtVm && deploySecondaryRegion) {
   name: 'deploy-asr-mgmt-vm'
   scope: resourceGroup(rgSecManagement)
+  dependsOn: [ secManagement ]  // ensure management VM and spoke VNet exist before deploying ASR replication; cache storage must exist for replication to succeed
   params: {
     location:               resolvedSecondaryRegion
     environment:            env

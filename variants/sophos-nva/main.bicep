@@ -553,6 +553,7 @@ module rgsPrimary '../../shared/governance/resourceGroups.bicep' = {
 module priConnectivity './connectivity/hubConnectivity.bicep' = {
   name: 'deploy-pri-connectivity'
   scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [ rgsPrimary ]
   params: {
     location:             primaryRegion
     environment:          env
@@ -638,6 +639,7 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module secConnectivity './connectivity/hubConnectivity.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-connectivity'
   scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [ rgsSecondary ]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -681,6 +683,7 @@ module secIdentity '../../shared/identity/adds/identityVnet.bicep' = if (deployS
 module secManagement '../../shared/management/managementVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management'
   scope: resourceGroup(rgSecManagement)
+  dependsOn: [ rgsSecondary ]
   params: {
     location:             resolvedSecondaryRegion
     environment:          env

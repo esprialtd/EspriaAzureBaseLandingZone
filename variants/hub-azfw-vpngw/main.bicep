@@ -443,6 +443,7 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module priConnectivity './connectivity/hubConnectivityAzfw.bicep' = {
   name: 'deploy-pri-connectivity'
   scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [ rgsPrimary ]
   params: {
     location: primaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: priAbbr
@@ -460,6 +461,7 @@ module priConnectivity './connectivity/hubConnectivityAzfw.bicep' = {
 module secConnectivity './connectivity/hubConnectivityAzfw.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-connectivity'
   scope: resourceGroup(rgSecConnectivity)
+  dependsOn: [ rgsSecondary ]
   params: {
     location: resolvedSecondaryRegion, environment: env
     customerAbbreviation: custAbbr, regionAbbreviation: secAbbr

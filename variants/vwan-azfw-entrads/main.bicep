@@ -472,6 +472,7 @@ module rgsSecondary '../../shared/governance/resourceGroups.bicep' = if (deployS
 module vwan './connectivity/virtualWan.bicep' = {
   name: 'deploy-vwan'
   scope: resourceGroup(rgPriConnectivity)
+  dependsOn: [ rgsPrimary, rgsSecondary ]  // must be deployed before hubs and spokes reference it
   params: {
     location:             primaryRegion
     environment:          env
@@ -486,6 +487,7 @@ module vwan './connectivity/virtualWan.bicep' = {
 module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-identity-spoke'
   scope: resourceGroup(rgPriIdentity)
+  dependsOn: [ vwan ]  // vWAN must be deployed before spokes reference it
   params: {
     location:             primaryRegion
     environment:          env
@@ -503,6 +505,7 @@ module priIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
   name: 'deploy-pri-management-spoke'
   scope: resourceGroup(rgPriManagement)
+  dependsOn: [ vwan ]  // vWAN must be deployed before spokes reference it
   params: {
     location:             primaryRegion
     environment:          env
@@ -520,6 +523,7 @@ module priManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = {
 module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-identity-spoke'
   scope: resourceGroup(rgSecIdentity)
+  dependsOn: [ vwan ]  // vWAN must be deployed before spokes reference it
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
@@ -537,6 +541,7 @@ module secIdentitySpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySec
 module secManagementSpokeVnet './connectivity/vwanSpokeVnet.bicep' = if (deploySecondaryRegion) {
   name: 'deploy-sec-management-spoke'
   scope: resourceGroup(rgSecManagement)
+  dependsOn: [ vwan ]  // vWAN must be deployed before spokes reference it
   params: {
     location:             resolvedSecondaryRegion
     environment:          env
