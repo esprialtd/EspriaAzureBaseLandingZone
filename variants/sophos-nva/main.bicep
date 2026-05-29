@@ -188,6 +188,8 @@ param onPremAddressPrefix string = '10.1.0.0/16'
 // ---------------------------------------------------------------------------
 @description('Sophos XG NVA VM size')
 @allowed ([
+  'Standard_B2ms'
+  'Standard_B4ms'
   'Standard_D2s_v5'
   'Standard_D4s_v5'
   'Standard_D8s_v5'

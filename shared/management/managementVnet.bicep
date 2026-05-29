@@ -181,7 +181,7 @@ resource peerToHub 'Microsoft.Network/virtualNetworks/virtualNetworkPeerings@202
 // lifetime; use Bastion for access (no RDP direct from internet).
 // ---------------------------------------------------------------------------
 resource mgmtVmNic 'Microsoft.Network/networkInterfaces@2023-06-01' = {
-  name: '${custAbbr}-AZ${regAbbr}-MGMT01-nic'
+  name: '${custAbbr}-AZ${regAbbr}-MGT01-nic'
   location: location
   tags: tags
   properties: {
@@ -202,14 +202,14 @@ resource mgmtVmNic 'Microsoft.Network/networkInterfaces@2023-06-01' = {
 // Management VM
 // ---------------------------------------------------------------------------
 resource mgmtVm 'Microsoft.Compute/virtualMachines@2023-09-01' = {
-  name: '${custAbbr}-AZ${regAbbr}-MGMT01'
+  name: '${custAbbr}-AZ${regAbbr}-MGT01'
   location: location
   zones: zoneEnabled ? zonesSingle : null
   tags: union(tags, { Application: 'Management Server', Function: 'Management Services', Role: 'Jump' })
   properties: {
     hardwareProfile: { vmSize: mgmtVmSize }
     osProfile: {
-      computerName:  '${custAbbr}-AZ${regAbbr}-MGMT01'
+      computerName:  '${custAbbr}-AZ${regAbbr}-MGT01'
       adminUsername: adminUsername
       adminPassword: adminPassword
       windowsConfiguration: {

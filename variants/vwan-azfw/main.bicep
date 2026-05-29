@@ -219,6 +219,8 @@ param adminPassword string
 
 @description('Domain Controller VM size')
 @allowed([
+  'Standard_B2ms'
+  'Standard_B4ms'
   'Standard_D2s_v5'
   'Standard_D4s_v5'
   'Standard_D2s_v5'

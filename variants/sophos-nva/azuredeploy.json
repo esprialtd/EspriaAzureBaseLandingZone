@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.43.8.12551",
-      "templateHash": "16382289503424206221"
+      "templateHash": "13775816199650941010"
     }
   },
   "parameters": {
@@ -149,6 +149,8 @@
       "type": "string",
       "defaultValue": "Standard_D2s_v5",
       "allowedValues": [
+        "Standard_B2ms",
+        "Standard_B4ms",
         "Standard_D2s_v5",
         "Standard_D4s_v5",
         "Standard_D8s_v5",
@@ -1835,7 +1837,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "14800058784956178264"
+              "templateHash": "12524627579281995470"
             }
           },
           "parameters": {
@@ -2061,7 +2063,7 @@
             {
               "type": "Microsoft.Network/networkInterfaces",
               "apiVersion": "2023-06-01",
-              "name": "[format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr'))]",
+              "name": "[format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "properties": {
@@ -2084,7 +2086,7 @@
             {
               "type": "Microsoft.Compute/virtualMachines",
               "apiVersion": "2023-09-01",
-              "name": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
+              "name": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
               "zones": "[if(parameters('zoneEnabled'), parameters('zonesSingle'), null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Management Server', 'Function', 'Management Services', 'Role', 'Jump'))]",
@@ -2093,7 +2095,7 @@
                   "vmSize": "[parameters('mgmtVmSize')]"
                 },
                 "osProfile": {
-                  "computerName": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
+                  "computerName": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]",
                   "adminUsername": "[parameters('adminUsername')]",
                   "adminPassword": "[parameters('adminPassword')]",
                   "windowsConfiguration": {
@@ -2123,7 +2125,7 @@
                 "networkProfile": {
                   "networkInterfaces": [
                     {
-                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr')))]",
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr')))]",
                       "properties": {
                         "primary": true,
                         "deleteOption": "Delete"
@@ -2138,7 +2140,7 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr')))]"
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr')))]"
               ]
             },
             {
@@ -2191,15 +2193,15 @@
             },
             "mgmtVmId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr')))]"
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr')))]"
             },
             "mgmtVmName": {
               "type": "string",
-              "value": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]"
+              "value": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]"
             },
             "mgmtVmOsDiskId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))), '2023-09-01').storageProfile.osDisk.managedDisk.id]"
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))), '2023-09-01').storageProfile.osDisk.managedDisk.id]"
             },
             "bastionId": {
               "type": "string",
@@ -3338,7 +3340,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.43.8.12551",
-              "templateHash": "14800058784956178264"
+              "templateHash": "12524627579281995470"
             }
           },
           "parameters": {
@@ -3564,7 +3566,7 @@
             {
               "type": "Microsoft.Network/networkInterfaces",
               "apiVersion": "2023-06-01",
-              "name": "[format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr'))]",
+              "name": "[format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
               "tags": "[parameters('tags')]",
               "properties": {
@@ -3587,7 +3589,7 @@
             {
               "type": "Microsoft.Compute/virtualMachines",
               "apiVersion": "2023-09-01",
-              "name": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
+              "name": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]",
               "location": "[parameters('location')]",
               "zones": "[if(parameters('zoneEnabled'), parameters('zonesSingle'), null())]",
               "tags": "[union(parameters('tags'), createObject('Application', 'Management Server', 'Function', 'Management Services', 'Role', 'Jump'))]",
@@ -3596,7 +3598,7 @@
                   "vmSize": "[parameters('mgmtVmSize')]"
                 },
                 "osProfile": {
-                  "computerName": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]",
+                  "computerName": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]",
                   "adminUsername": "[parameters('adminUsername')]",
                   "adminPassword": "[parameters('adminPassword')]",
                   "windowsConfiguration": {
@@ -3626,7 +3628,7 @@
                 "networkProfile": {
                   "networkInterfaces": [
                     {
-                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr')))]",
+                      "id": "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr')))]",
                       "properties": {
                         "primary": true,
                         "deleteOption": "Delete"
@@ -3641,7 +3643,7 @@
                 }
               },
               "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGMT01-nic', variables('custAbbr'), variables('regAbbr')))]"
+                "[resourceId('Microsoft.Network/networkInterfaces', format('{0}-AZ{1}-MGT01-nic', variables('custAbbr'), variables('regAbbr')))]"
               ]
             },
             {
@@ -3694,15 +3696,15 @@
             },
             "mgmtVmId": {
               "type": "string",
-              "value": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr')))]"
+              "value": "[resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr')))]"
             },
             "mgmtVmName": {
               "type": "string",
-              "value": "[format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))]"
+              "value": "[format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))]"
             },
             "mgmtVmOsDiskId": {
               "type": "string",
-              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGMT01', variables('custAbbr'), variables('regAbbr'))), '2023-09-01').storageProfile.osDisk.managedDisk.id]"
+              "value": "[reference(resourceId('Microsoft.Compute/virtualMachines', format('{0}-AZ{1}-MGT01', variables('custAbbr'), variables('regAbbr'))), '2023-09-01').storageProfile.osDisk.managedDisk.id]"
             },
             "bastionId": {
               "type": "string",
